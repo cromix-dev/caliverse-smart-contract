@@ -2,17 +2,16 @@
 
 pragma solidity ^0.8.12;
 
-import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts/utils/Strings.sol';
-import './RevealableUpgradeable.sol';
-import '../libraries/LibSale.sol';
-import '../libraries/LibNFTAdmin.sol';
-import '../StakingContract/StakingContractV1.sol';
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "../libraries/LibSale.sol";
+import "../libraries/LibNFTAdmin.sol";
+import "../StakingContract/StakingContractV1.sol";
 
 contract GeneralERC721V1 is
   Initializable,
@@ -83,26 +82,24 @@ contract GeneralERC721V1 is
     return saleInfo.adminOnly;
   }
 
-  function supportsInterface(
-    bytes4 interfaceId
-  ) public view override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (bool) {
+  function supportsInterface(bytes4 interfaceId) public view override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (bool) {
     return super.supportsInterface(interfaceId);
   }
 
   modifier callerIsUser() {
-    require(tx.origin == msg.sender, 'The caller is another contract');
+    require(tx.origin == msg.sender, "The caller is another contract");
     _;
   }
 
   modifier onSale() {
-    require(saleInfo.startTime <= block.timestamp && saleInfo.endTime >= block.timestamp, 'not opened');
+    require(saleInfo.startTime <= block.timestamp && saleInfo.endTime >= block.timestamp, "not opened");
     _;
   }
 
   function _safeSaleMint(address to, uint256 quantity_) private returns (uint256[] memory) {
-    require(totalSupply() + quantity_ <= saleInfo.limit, 'can not mint this many');
-    require(quantity_ <= saleInfo.maxPerTx, 'can not mint this many');
-    require(saleInfo.mintedDuringSale[msg.sender] + quantity_ <= saleInfo.maxPerAddr, 'exceed max mint per address');
+    require(totalSupply() + quantity_ <= saleInfo.limit, "can not mint this many");
+    require(quantity_ <= saleInfo.maxPerTx, "can not mint this many");
+    require(saleInfo.mintedDuringSale[msg.sender] + quantity_ <= saleInfo.maxPerAddr, "exceed max mint per address");
     uint256[] memory tokenIds = _safeMintMany(to, quantity_);
     saleInfo.mintedDuringSale[msg.sender] = mintedDuringSale(msg.sender) + quantity_;
     saleInfo.totalMinted = saleInfo.totalMinted + quantity_;
@@ -111,8 +108,8 @@ contract GeneralERC721V1 is
   }
 
   function _safeMintMany(address to, uint256 quantity_) private returns (uint256[] memory) {
-    require(nextTokenId + quantity_ <= collectionSize, 'exceed collection size');
-    require(totalSupply() + quantity_ <= collectionSize, 'reached max supply');
+    require(nextTokenId + quantity_ <= collectionSize, "exceed collection size");
+    require(totalSupply() + quantity_ <= collectionSize, "reached max supply");
 
     uint256[] memory tokenIds = new uint256[](quantity_);
     for (uint256 i = 0; i < quantity_; i++) {
@@ -128,7 +125,7 @@ contract GeneralERC721V1 is
   }
 
   function _refundIfOver(uint256 price_) private {
-    require(msg.value >= price_, 'Need to send more ETH.');
+    require(msg.value >= price_, "Need to send more ETH.");
     if (msg.value > price_) {
       payable(msg.sender).transfer(msg.value - price_);
     }
@@ -144,11 +141,7 @@ contract GeneralERC721V1 is
     _baseTokenURI = baseURI;
   }
 
-  function _beforeTokenTransfer(
-    address from,
-    address to,
-    uint256 tokenId
-  ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
+  function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
     super._beforeTokenTransfer(from, to, tokenId);
   }
 
@@ -186,7 +179,7 @@ contract GeneralERC721V1 is
   function getMessageHash(bytes memory _message) public pure returns (bytes32) {
     string memory msgLength = Strings.toString(_message.length);
 
-    return keccak256(abi.encodePacked(string.concat('\x19Ethereum Signed Message:\n', msgLength), _message));
+    return keccak256(abi.encodePacked(string.concat("\x19Ethereum Signed Message:\n", msgLength), _message));
   }
 
   function splitSignature(bytes memory sig) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
@@ -211,16 +204,11 @@ contract GeneralERC721V1 is
     return ecrecover(messageHash, _v, _r, _s);
   }
 
-  function publicMint(
-    bytes memory walletPair,
-    uint256 quantity,
-    bytes memory sig,
-    uint256 key_
-  ) external payable onSale {
+  function publicMint(bytes memory walletPair, uint256 quantity, bytes memory sig, uint256 key_) external payable onSale {
     (address externalWallet, address stakingContract) = splitWalletPair(walletPair);
 
-    require(msg.sender == address(externalWallet), 'wrong external wallet');
-    require(recoverSig(walletPair, sig) == address(caliverseHotwallet), 'wrong signature');
+    require(msg.sender == address(externalWallet), "wrong external wallet");
+    require(recoverSig(walletPair, sig) == address(caliverseHotwallet), "wrong signature");
 
     if (saleInfo.adminOnly) {
       LibNFTAdmin.isAdmin(admins);
@@ -247,8 +235,8 @@ contract GeneralERC721V1 is
 
   function allowMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable callerIsUser onSale {
     (address externalWallet, address stakingContract) = splitWalletPair(walletPair);
-    require(msg.sender == address(externalWallet), 'wrong external wallet');
-    require(recoverSig(walletPair, sig) == address(caliverseHotwallet), 'wrong signature');
+    require(msg.sender == address(externalWallet), "wrong external wallet");
+    require(recoverSig(walletPair, sig) == address(caliverseHotwallet), "wrong signature");
     LibSale.validatePrivateSale(saleInfo, quantity);
     uint256 totalPrice = uint256(saleInfo.price * quantity);
     saleInfo.allowlist[msg.sender] = saleInfo.allowlist[msg.sender] - quantity;
@@ -262,14 +250,14 @@ contract GeneralERC721V1 is
   }
 
   function seedAllowlist(address[] calldata addresses, uint256[] calldata numSlots) external onlyOwner {
-    require(addresses.length == numSlots.length, 'length not match');
+    require(addresses.length == numSlots.length, "length not match");
     for (uint256 i = 0; i < addresses.length; i++) {
       saleInfo.allowlist[addresses[i]] = numSlots[i];
     }
   }
 
   function mintTo(address[] memory addresses, uint256[] memory amounts) public onlyOwner {
-    require(addresses.length == amounts.length, 'length not match');
+    require(addresses.length == amounts.length, "length not match");
     for (uint256 i = 0; i < addresses.length; i++) {
       _safeMintMany(addresses[i], amounts[i]);
     }
@@ -280,10 +268,10 @@ contract GeneralERC721V1 is
   }
 
   function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-    require(_exists(tokenId), 'ERC721Metadata: URI query for nonexistent token');
+    require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
     string memory baseURI = _baseURI();
-    return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString(), '.json')) : '';
+    return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString(), ".json")) : "";
   }
 
   function addAdmin(address newAdmin) external isAdmin {
@@ -329,9 +317,7 @@ contract GeneralERC721V1 is
     return saleInfo.totalMinted;
   }
 
-  function splitWalletPair(
-    bytes memory walletPair
-  ) internal pure returns (address externalWallet, address stakingContract) {
+  function splitWalletPair(bytes memory walletPair) internal pure returns (address externalWallet, address stakingContract) {
     // require(walletPair.length == 64);
 
     assembly {
