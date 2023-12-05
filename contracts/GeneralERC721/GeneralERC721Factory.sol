@@ -67,7 +67,7 @@ contract GeneralERC721Factory is Ownable {
   }
 
   // You should transfer ownership to factory before run this method
-  function bulkUpgrade(uint256 startIndex, uint256 endIndex, address logic_) {
+  function bulkUpgrade(uint256 startIndex, uint256 endIndex, address logic_) public onlyOwner {
     for (uint256 i = startIndex; i <= endIndex; i++) {
       ProxyAdmin(admin).upgrade(TransparentUpgradeableProxy(proxies[i]), logic_);
     }
