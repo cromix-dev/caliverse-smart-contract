@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.7.0",
+    "@openzeppelin/contracts-upgradeable": "^4.7.0",
+    "multi-token-standard": "^2.2.2"
+  },
+  "devDependencies": {
+    "solc": "^0.8.9",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
+    "truffle-hdwallet-provider": "^1.0.17"
+  }
+}

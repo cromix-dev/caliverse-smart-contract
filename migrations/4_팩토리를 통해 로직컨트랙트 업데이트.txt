@@ -1,0 +1,13 @@
+// WALLET_PK= npx truffle migrate -f 4 --to 4 --network goerli --resett
+const { setConfig } = require('./config.js');
+const GeneralERC721Factory = artifacts.require('../contracts/GeneralERC721/GeneralERC721Factory.sol');
+
+module.exports = async (deployer, network) => {
+  const factory = await GeneralERC721Factory.at('0x4Aad809b39AA160b6C0C3C66FACb14e8e3314e2D');
+  // for (let i = 0; i < 10; i++) {
+  //   const proxy = await factory.proxies(i);
+  //   console.log({ i, proxy });
+  // }
+
+  await factory.bulkUpgrade(0, 5, '0x7E87860e6BCb23fc1d24182653304be0033D3807');
+};

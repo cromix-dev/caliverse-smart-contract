@@ -1,0 +1,7 @@
+**/*/build
+**/*/artifacts
+**/*/.deps
+node_modules
+**/*/node_modules
+build
+.DS_Store

@@ -1,0 +1,19 @@
+{
+  "name": "klaydistributer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "caver-js": "^1.9.0",
+    "truffle-hdwallet-provider-klaytn": "^1.4.2"
+  },
+  "devDependencies": {
+    "solc": "^0.8.9",
+    "truffle-hdwallet-provider": "^1.0.17"
+  }
+}

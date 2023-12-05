@@ -1,0 +1,16 @@
+{
+  "deployed": {
+    "goerli-fork": {
+      "EthDistributer": "0x390472abA1d35acD5101b534e263729BAbAF8cB0"
+    },
+    "goerli": {
+      "EthDistributer": "0x390472abA1d35acD5101b534e263729BAbAF8cB0"
+    },
+    "mainnet-fork": {
+      "EthDistributer": "0x9697Ba98ebfb01d34ee8acC6785B088853278486"
+    },
+    "mainnet": {
+      "EthDistributer": "0x9697Ba98ebfb01d34ee8acC6785B088853278486"
+    }
+  }
+}

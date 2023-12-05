@@ -1,0 +1,39 @@
+// WALLET_PK= npx truffle migrate -f 2 --to 2 --network polygon_infura_testnet --reset
+const { setConfig } = require("./config.js");
+const GeneralERC721V1 = artifacts.require("../contracts/GeneralERC721/GeneralERC721V1.sol");
+const GeneralERC721Factory = artifacts.require("../contracts/GeneralERC721/GeneralERC721Factory.sol");
+// const ContractWalletV1 = artifacts.require('../contracts/ContractWalletV1.sol');
+// const ContractWalletFactory = artifacts.require('../contracts/ContractWalletFactory.sol');
+
+const baseUri = "https://qa-graegrae-public.s3.ap-northeast-2.amazonaws.com/contracts/";
+
+module.exports = async (deployer, network) => {
+  const factory = await GeneralERC721Factory.at(GeneralERC721Factory.address);
+  let result = await factory.build("hello", "world", 100);
+  // OwnershipTransferred 이벤트가 발생한 컨트랙트가 proxy 이다.
+  const erc721addr = result.receipt.rawLogs[0].address;
+  const erc721 = await GeneralERC721V1.at(erc721addr);
+  const startTime = Math.floor(Date.now() / 1000) - 10000;
+  const endTime = Math.floor(Date.now() / 1000) + 10000;
+  const owner = await erc721.owner();
+
+  const publicMintType = 2;
+  const _adminOnly = 1;
+  await erc721.setSaleInfo(startTime, endTime, 0, 100, publicMintType, 10, 10, 1, _adminOnly);
+  const adminonly = await erc721.adminOnly();
+  console.log({ owner, adminonly });
+  await erc721.publicMint(1, 1);
+
+  // const walletFactory = await ContractWalletFactory.at(ContractWalletFactory.address);
+  // const walletcnt = (await walletFactory.walletCnt()).toNumber();
+  // const buildCnt = 1;
+  // await walletFactory.build(ContractWalletV1.address, buildCnt);
+  // console.log({ walletcnt, buildCnt });
+  // for (let i = walletcnt; i < walletcnt + buildCnt; i++) {
+  //   const walletaddr = await walletFactory.proxies(i);
+  //   console.log({ erc721addr, walletaddr });
+  //   const wallet = await ContractWalletV1.at(walletaddr);
+  //   await wallet.publicMint(erc721addr, 1, 1);
+  // }
+  // console.log(result.logs);
+};
