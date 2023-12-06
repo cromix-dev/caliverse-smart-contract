@@ -38,6 +38,8 @@ contract StakingContractV1 is IERC721ReceiverUpgradeable, Initializable, Ownable
   }
 
   function stake(address contractAddress, uint256 tokenId) public {
+    require(stakingInfo[contractAddress][msg.sender][tokenId] == 0, 'You already have this token');
+
     stakingInfo[contractAddress][msg.sender][tokenId] = 1;
     IERC721(contractAddress).transferFrom(msg.sender, address(this), tokenId);
     emit Staked(contractAddress, msg.sender, tokenId);
