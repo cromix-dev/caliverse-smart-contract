@@ -15,16 +15,11 @@ library LibNFTAdmin {
   }
 
   function removeAdmin(address[] storage admins, address address_) public {
-    bool _hasAdmin = false;
-    for (uint256 i = 0; i < admins.length - 1; i++) {
+    for (uint256 i = 0; i < admins.length; i++) {
       if (admins[i] == address_) {
         admins[i] = admins[admins.length - 1];
-        _hasAdmin = true;
+        admins.pop();
       }
-    }
-
-    if (_hasAdmin) {
-      admins.pop();
     }
   }
 }
