@@ -389,16 +389,7 @@ contract GeneralERC721V1 is
     }
 
     function adminMint(address to, uint256 amount) public isAdmin {
-        _safeMint(to, amount);
-    }
-
-    function adminBulkMint(
-        address to,
-        uint256[] memory amounts
-    ) public isAdmin {
-        for (uint256 i = 0; i < amounts.length; i++) {
-            _safeMint(to, amounts[i]);
-        }
+        _safeMintMany(to, amount);
     }
 
     function mintedWithinSale() public view returns (uint256) {
