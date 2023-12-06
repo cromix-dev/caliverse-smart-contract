@@ -18,23 +18,25 @@ contract StakingContractV1 is IERC721ReceiverUpgradeable, Initializable, Ownable
   event Staked(address indexed contractAddress, address indexed walletAddress, uint256 indexed tokenId);
   event Unstaked(address indexed contractAddress, address indexed walletAddress, uint256 indexed tokenId);
 
-  function initialize() public initializer{
+  function initialize() public initializer {
     __Ownable_init();
   }
 
   function bulkStake(address[] memory contractAddresses, uint256[] memory tokenIds) public {
+    require(contractAddresses.length == tokenIds.length, 'Length of contractAddresses and tokenIds should be same');
     for (uint256 i = 0; i < tokenIds.length; i++) {
       stake(contractAddresses[i], tokenIds[i]);
     }
   }
 
   function bulkUnstake(address[] memory contractAddresses, uint256[] memory tokenIds) public {
+    require(contractAddresses.length == tokenIds.length, 'Length of contractAddresses and tokenIds should be same');
     for (uint256 i = 0; i < tokenIds.length; i++) {
       unstake(contractAddresses[i], tokenIds[i]);
     }
   }
 
-  function stake(address contractAddress, uint256 tokenId) public{
+  function stake(address contractAddress, uint256 tokenId) public {
     stakingInfo[contractAddress][msg.sender][tokenId] = 1;
     IERC721(contractAddress).transferFrom(msg.sender, address(this), tokenId);
     emit Staked(contractAddress, msg.sender, tokenId);
