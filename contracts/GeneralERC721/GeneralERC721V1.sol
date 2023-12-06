@@ -139,13 +139,6 @@ contract GeneralERC721V1 is
     }
   }
 
-  function _refundIfOver(uint256 price_) private {
-    require(msg.value >= price_, 'Need to send more ETH.');
-    if (msg.value > price_) {
-      payable(msg.sender).transfer(msg.value - price_);
-    }
-  }
-
   string private _baseTokenURI;
 
   function _baseURI() internal view virtual override returns (string memory) {

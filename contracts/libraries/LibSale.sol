@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+import '@openzeppelin/contracts/utils/Address.sol';
+
 pragma solidity ^0.8.12;
 
 library LibSale {
@@ -15,7 +17,7 @@ library LibSale {
   function refundIfOver(uint256 price_) public {
     require(msg.value >= price_, 'Need to send more ETH.');
     if (msg.value > price_) {
-      payable(msg.sender).transfer(msg.value - price_);
+      Address.sendValue(payable(msg.sender), msg.value - price_);
     }
   }
 
