@@ -1,4 +1,8 @@
 {
+  "[solidity]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "solidity.defaultCompiler": "localNodeModule", // 여기 로컬 모듈로 컴파일함
   "editor.formatOnSave": true,
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -24,5 +28,6 @@
   "prettier.semi": true,
   "prettier.useTabs": false,
   "prettier.bracketSpacing": true,
-  "prettier.jsxSingleQuote": true
+  "prettier.jsxSingleQuote": true,
+  "solidity.packageDefaultDependenciesDirectory": "./node_modules"
 }

@@ -33,6 +33,10 @@ contract GeneralERC721V1 is
   event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
   address public caliverseHotwallet;
 
+  constructor() {
+    _disableInitializers();
+  }
+
   function initialize(
     string memory name_,
     string memory symbol_,
