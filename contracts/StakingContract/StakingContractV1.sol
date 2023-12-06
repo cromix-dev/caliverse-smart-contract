@@ -9,7 +9,7 @@ import '@openzeppelin/contracts/utils/Strings.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 
 interface IERC721 {
-  function transferFrom(address from, address to, uint256 tokenId) external;
+  function safeTransferFrom(address from, address to, uint256 tokenId) external;
 }
 
 contract StakingContractV1 is IERC721ReceiverUpgradeable, Initializable, OwnableUpgradeable {
@@ -41,7 +41,7 @@ contract StakingContractV1 is IERC721ReceiverUpgradeable, Initializable, Ownable
     require(stakingInfo[contractAddress][msg.sender][tokenId] == 0, 'You already have this token');
 
     stakingInfo[contractAddress][msg.sender][tokenId] = 1;
-    IERC721(contractAddress).transferFrom(msg.sender, address(this), tokenId);
+    IERC721(contractAddress).safeTransferFrom(msg.sender, address(this), tokenId);
     emit Staked(contractAddress, msg.sender, tokenId);
   }
 
@@ -55,7 +55,7 @@ contract StakingContractV1 is IERC721ReceiverUpgradeable, Initializable, Ownable
   function unstake(address contractAddress, uint256 tokenId) public {
     require(stakingInfo[contractAddress][msg.sender][tokenId] == 1, "You don't have this token");
     stakingInfo[contractAddress][msg.sender][tokenId] = 0;
-    IERC721(contractAddress).transferFrom(address(this), msg.sender, tokenId);
+    IERC721(contractAddress).safeTransferFrom(address(this), msg.sender, tokenId);
     emit Unstaked(contractAddress, msg.sender, tokenId);
   }
 
