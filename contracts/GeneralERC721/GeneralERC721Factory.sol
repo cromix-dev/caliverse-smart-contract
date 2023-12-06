@@ -9,10 +9,10 @@ import '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol';
 
 contract GeneralERC721Factory is Ownable {
   ProxyAdmin public admin;
-  address public logic;
+  address public immutable logic;
   TransparentUpgradeableProxy[] public proxies;
-  string baseUri;
-  address public caliverseHotwallet;
+  string public baseUri;
+  address public immutable caliverseHotwallet;
   bytes16 private constant HEX_DIGITS = '0123456789abcdef';
   bytes16 private constant HEX_CAPITAL = '0123456789ABCDEF';
 
