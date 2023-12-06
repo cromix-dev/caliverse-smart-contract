@@ -99,7 +99,7 @@ contract GeneralERC721V1 is
   }
 
   function _safeSaleMint(address to, uint256 quantity_) private returns (uint256[] memory) {
-    require(totalSupply() + quantity_ <= saleInfo.limit, 'can not mint this many');
+    require(saleInfo.totalMinted + quantity_ <= saleInfo.limit, 'can not mint this many');
     require(quantity_ <= saleInfo.maxPerTx, 'can not mint this many');
     require(saleInfo.mintedDuringSale[msg.sender] + quantity_ <= saleInfo.maxPerAddr, 'exceed max mint per address');
     uint256[] memory tokenIds = _safeMintMany(to, quantity_);
