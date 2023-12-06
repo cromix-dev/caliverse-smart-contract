@@ -16,7 +16,7 @@ contract('GeneralERC721V1', (accounts) => {
     const startTime = Math.floor(Date.now() / 1000) - 10000;
     const endTime = Math.floor(Date.now() / 1000) + 10000;
     const owner = await erc721.owner();
-    const publicMintType = 2;
+    const publicMintType = 1;
     const _adminOnly = 0;
 
     const price = new Bignumber(0.01e18);
@@ -58,7 +58,7 @@ contract('GeneralERC721V1', (accounts) => {
     // const startTime = Math.floor(Date.now() / 1000) - 10000;
     // const endTime = Math.floor(Date.now() / 1000) + 10000;
     // const owner = await erc721.owner();
-    // const publicMintType = 2;
+    // const publicMintType = 1;
     // const _adminOnly = 0;
     // await erc721.setSaleInfo(startTime, endTime, 0, 100, publicMintType, 10, 10, 1, _adminOnly);
     // const adminonly = await erc721.adminOnly();
@@ -84,7 +84,7 @@ contract('GeneralERC721V1', (accounts) => {
     const startTime = Math.floor(Date.now() / 1000) - 10000;
     const endTime = Math.floor(Date.now() / 1000) + 10000;
     const owner = await erc721.owner();
-    const allowmintType = 1;
+    const allowmintType = 2;
     const _adminOnly = 0;
     const maxPerAddress = 30;
     const maxPerTx = 10;

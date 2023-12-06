@@ -31,13 +31,13 @@ library LibSale {
   function validatePublicSale(SaleInfo storage saleInfo, uint256 quantity) public view {
     _commonValidation(saleInfo, quantity);
 
-    require(saleInfo._mintType == 2, 'public sale not opened');
+    require(saleInfo._mintType == 1, 'public sale not opened');
   }
 
   function validatePrivateSale(SaleInfo storage saleInfo, uint256 quantity) public view callerIsUser {
     _commonValidation(saleInfo, quantity);
 
-    require(saleInfo._mintType == 1, 'sale not opened');
+    require(saleInfo._mintType == 2, 'sale not opened');
     require(saleInfo.allowlist[msg.sender] >= quantity, 'not eligible for allowlist mint');
   }
 }
@@ -49,7 +49,7 @@ struct SaleInfo {
   uint256 limit; // 전체 제한이 아니라 이번 세일에서의 제한
   uint256 maxPerAddr;
   uint256 maxPerTx;
-  uint32 _mintType; // 1: allow sale, 2: public sale
+  uint32 _mintType; // 1: public sale, 2: allow sale
   mapping(address => uint256) allowlist;
   mapping(address => uint256) mintedDuringSale;
   address[] participants;

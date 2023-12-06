@@ -17,7 +17,7 @@ module.exports = async (deployer, network) => {
   const endTime = Math.floor(Date.now() / 1000) + 10000;
   const owner = await erc721.owner();
 
-  const publicMintType = 2;
+  const publicMintType = 1;
   const _adminOnly = 1;
   await erc721.setSaleInfo(startTime, endTime, 0, 100, publicMintType, 10, 10, 1, _adminOnly);
   const adminonly = await erc721.adminOnly();
