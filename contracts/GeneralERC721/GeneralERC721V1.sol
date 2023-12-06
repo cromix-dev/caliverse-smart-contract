@@ -12,6 +12,7 @@ import '@openzeppelin/contracts/utils/Strings.sol';
 import '../libraries/LibSale.sol';
 import '../libraries/LibNFTAdmin.sol';
 import '../StakingContract/StakingContractV1.sol';
+import '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 
 contract GeneralERC721V1 is
   Initializable,
@@ -178,12 +179,6 @@ contract GeneralERC721V1 is
     return bytes(text).length;
   }
 
-  function getMessageHash(bytes memory _message) public pure returns (bytes32) {
-    string memory msgLength = Strings.toString(_message.length);
-
-    return keccak256(abi.encodePacked(string.concat('\x19Ethereum Signed Message:\n', msgLength), _message));
-  }
-
   function splitSignature(bytes memory sig) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
     require(sig.length == 65);
 
@@ -200,7 +195,7 @@ contract GeneralERC721V1 is
   }
 
   function recoverSig(bytes memory data, bytes memory sig) public pure returns (address) {
-    bytes32 messageHash = getMessageHash(data);
+    bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(data);
     (uint8 _v, bytes32 _r, bytes32 _s) = splitSignature(sig);
 
     return ecrecover(messageHash, _v, _r, _s);
