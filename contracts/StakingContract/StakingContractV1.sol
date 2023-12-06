@@ -6,6 +6,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/AddressUpgradeable.sol';
 
 interface IERC721 {
   function transferFrom(address from, address to, uint256 tokenId) external;
@@ -42,11 +43,11 @@ contract StakingContractV1 is IERC721ReceiverUpgradeable, Initializable, Ownable
     emit Staked(contractAddress, msg.sender, tokenId);
   }
 
-  function addStakingInfo(address contractAddress, address walletAddress, uint256 tokenId) public {
-    require(msg.sender == contractAddress, 'Only contract can call this function');
-    require(stakingInfo[contractAddress][walletAddress][tokenId] == 0, 'This token is already staked');
-    stakingInfo[contractAddress][walletAddress][tokenId] = 1;
-    emit Staked(contractAddress, walletAddress, tokenId);
+  function addStakingInfo(address walletAddress, uint256 tokenId) public {
+    require(AddressUpgradeable.isContract(msg.sender), 'Only contract can call this function');
+    require(stakingInfo[msg.sender][walletAddress][tokenId] == 0, 'This token is already staked');
+    stakingInfo[msg.sender][walletAddress][tokenId] = 1;
+    emit Staked(msg.sender, walletAddress, tokenId);
   }
 
   function unstake(address contractAddress, uint256 tokenId) public {

@@ -234,7 +234,7 @@ contract GeneralERC721V1 is
     }
     uint256[] memory tokenIds = _publicMint(stakingContract, quantity);
     for (uint256 i = 0; i < tokenIds.length; i++) {
-      StakingContractV1(stakingContract).addStakingInfo(address(this), externalWallet, tokenIds[i]);
+      StakingContractV1(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
     }
 
     emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
@@ -261,7 +261,7 @@ contract GeneralERC721V1 is
     LibSale.refundIfOver(totalPrice);
     payable(owner()).transfer(totalPrice);
     for (uint256 i = 0; i < tokenIds.length; i++) {
-      StakingContractV1(stakingContract).addStakingInfo(address(this), externalWallet, tokenIds[i]);
+      StakingContractV1(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
     }
     emit Purchased(msg.sender, 2, quantity, uint256(saleInfo.price * quantity));
   }
