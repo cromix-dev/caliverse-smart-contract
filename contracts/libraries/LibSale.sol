@@ -22,6 +22,7 @@ library LibSale {
   }
 
   function _commonValidation(SaleInfo storage saleInfo, uint256 quantity) public view {
+    require(saleInfo.totalMinted + quantity <= saleInfo.limit, 'can not mint this many');
     require(saleInfo.startTime <= block.timestamp && saleInfo.endTime >= block.timestamp, 'not opened');
     require(quantity <= saleInfo.maxPerTx, 'can not mint this many');
     require(saleInfo.mintedDuringSale[msg.sender] + quantity <= saleInfo.maxPerAddr, 'exceed max mint per address');

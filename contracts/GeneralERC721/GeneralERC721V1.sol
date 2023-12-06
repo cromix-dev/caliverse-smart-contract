@@ -93,15 +93,7 @@ contract GeneralERC721V1 is
     _;
   }
 
-  modifier onSale() {
-    require(saleInfo.startTime <= block.timestamp && saleInfo.endTime >= block.timestamp, 'not opened');
-    _;
-  }
-
   function _safeSaleMint(address to, uint256 quantity_) private returns (uint256[] memory) {
-    require(saleInfo.totalMinted + quantity_ <= saleInfo.limit, 'can not mint this many');
-    require(quantity_ <= saleInfo.maxPerTx, 'can not mint this many');
-    require(saleInfo.mintedDuringSale[msg.sender] + quantity_ <= saleInfo.maxPerAddr, 'exceed max mint per address');
     uint256[] memory tokenIds = _safeMintMany(to, quantity_);
     saleInfo.mintedDuringSale[msg.sender] = mintedDuringSale(msg.sender) + quantity_;
     saleInfo.totalMinted = saleInfo.totalMinted + quantity_;
@@ -214,7 +206,7 @@ contract GeneralERC721V1 is
     return ecrecover(messageHash, _v, _r, _s);
   }
 
-  function publicMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable onSale {
+  function publicMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable {
     (address externalWallet, address stakingContract) = splitWalletPair(walletPair);
 
     require(msg.sender == address(externalWallet), 'wrong external wallet');
@@ -233,7 +225,7 @@ contract GeneralERC721V1 is
     emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
   }
 
-  function _publicMint(address to, uint256 quantity) private onSale returns (uint256[] memory) {
+  function _publicMint(address to, uint256 quantity) private returns (uint256[] memory) {
     LibSale.validatePublicSale(saleInfo, quantity);
     uint256 totalPrice = uint256(saleInfo.price * quantity);
 
@@ -243,7 +235,7 @@ contract GeneralERC721V1 is
     return tokenIds;
   }
 
-  function allowMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable callerIsUser onSale {
+  function allowMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable callerIsUser {
     (address externalWallet, address stakingContract) = splitWalletPair(walletPair);
     require(msg.sender == address(externalWallet), 'wrong external wallet');
     require(recoverSig(walletPair, sig) == address(caliverseHotwallet), 'wrong signature');
