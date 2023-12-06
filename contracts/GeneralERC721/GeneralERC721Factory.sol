@@ -63,7 +63,7 @@ contract GeneralERC721Factory is Ownable {
       owner(),
       caliverseHotwallet
     );
-    GeneralERC721V1(address(proxy)).transferOwnership(tx.origin);
+    GeneralERC721V1(address(proxy)).transferOwnership(msg.sender);
   }
 
   // You should transfer ownership to factory before run this method
