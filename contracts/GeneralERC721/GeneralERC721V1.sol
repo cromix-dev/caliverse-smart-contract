@@ -388,10 +388,6 @@ contract GeneralERC721V1 is
         return _holds[account].length;
     }
 
-    function adminMint(address to, uint256 amount) public isAdmin {
-        _safeMintMany(to, amount);
-    }
-
     function mintedWithinSale() public view returns (uint256) {
         return saleInfo.totalMinted;
     }
