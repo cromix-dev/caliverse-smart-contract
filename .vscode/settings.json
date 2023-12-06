@@ -30,5 +30,6 @@
   "prettier.useTabs": false,
   "prettier.bracketSpacing": true,
   "prettier.jsxSingleQuote": true,
-  "solidity.packageDefaultDependenciesDirectory": "./node_modules"
+  "solidity.packageDefaultDependenciesDirectory": "node_modules",
+  "solidity.packageDefaultDependenciesContractsDirectory": "contracts"
 }
