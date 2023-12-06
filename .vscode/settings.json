@@ -1,6 +1,6 @@
 {
   "[solidity]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "JuanBlanco.solidity"
   },
   "solidity.defaultCompiler": "localNodeModule", // 여기 로컬 모듈로 컴파일함
   "editor.formatOnSave": true,
