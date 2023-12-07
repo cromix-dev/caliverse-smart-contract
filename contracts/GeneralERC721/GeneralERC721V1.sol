@@ -205,7 +205,7 @@ contract GeneralERC721V1 is
     return ecrecover(messageHash, _v, _r, _s);
   }
 
-  function publicMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable {
+  function publicMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable nonReentrant {
     (address externalWallet, address stakingContract) = splitWalletPair(walletPair);
 
     require(msg.sender == address(externalWallet), 'wrong external wallet');
@@ -234,7 +234,11 @@ contract GeneralERC721V1 is
     return tokenIds;
   }
 
-  function allowMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable callerIsUser {
+  function allowMint(
+    bytes memory walletPair,
+    uint256 quantity,
+    bytes memory sig
+  ) external payable nonReentrant callerIsUser {
     (address externalWallet, address stakingContract) = splitWalletPair(walletPair);
     require(msg.sender == address(externalWallet), 'wrong external wallet');
     require(recoverSig(walletPair, sig) == address(caliverseHotwallet), 'wrong signature');
@@ -257,7 +261,7 @@ contract GeneralERC721V1 is
     }
   }
 
-  function mintTo(address[] memory addresses, uint256[] memory amounts) public onlyOwner {
+  function mintTo(address[] memory addresses, uint256[] memory amounts) public nonReentrant onlyOwner {
     require(addresses.length == amounts.length, 'length not match');
     for (uint256 i = 0; i < addresses.length; i++) {
       _safeMintMany(addresses[i], amounts[i]);
