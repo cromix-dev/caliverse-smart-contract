@@ -53,6 +53,5 @@ struct SaleInfo {
   mapping(address => uint256) allowlist;
   mapping(address => uint256) mintedDuringSale;
   address[] participants;
-  bool adminOnly;
   uint256 totalMinted;
 }

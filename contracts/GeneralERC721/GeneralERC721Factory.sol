@@ -21,6 +21,7 @@ contract GeneralERC721Factory is Ownable {
     logic = logic_;
     baseUri = baseUri_;
     caliverseHotwallet = caliverseHotwallet_;
+    admin.renounceOwnership();
   }
 
   function toChecksumHexString(address addr) public pure returns (string memory) {
@@ -60,21 +61,9 @@ contract GeneralERC721Factory is Ownable {
       symbol_,
       collectionSize_,
       string(abi.encodePacked(baseUri, toChecksumHexString(address(proxy)), '/metadata/')),
-      owner(),
       caliverseHotwallet
     );
     GeneralERC721V1(address(proxy)).transferOwnership(msg.sender);
-  }
-
-  // You should transfer ownership to factory before run this method
-  function bulkUpgrade(uint256 startIndex, uint256 endIndex, address logic_) public onlyOwner {
-    for (uint256 i = startIndex; i <= endIndex; i++) {
-      ProxyAdmin(admin).upgrade(TransparentUpgradeableProxy(proxies[i]), logic_);
-    }
-  }
-
-  function transferAdminOwnership(address payable newOwner_) public onlyOwner {
-    ProxyAdmin(admin).transferOwnership(newOwner_);
   }
 
   function setUri(string memory baseUri_) public onlyOwner {

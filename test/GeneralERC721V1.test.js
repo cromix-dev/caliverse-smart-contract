@@ -17,12 +17,11 @@ contract('GeneralERC721V1', (accounts) => {
     const endTime = Math.floor(Date.now() / 1000) + 10000;
     const owner = await erc721.owner();
     const publicMintType = 1;
-    const _adminOnly = 0;
 
     const price = new Bignumber(0.01e18);
-    await erc721.setSaleInfo(startTime, endTime, price.toString(), 100, publicMintType, 10, 10, 1, _adminOnly);
-    const adminonly = await erc721.adminOnly();
-    console.log({ owner, adminonly });
+    await erc721.setSaleInfo(startTime, endTime, price.toString(), 100, publicMintType, 10, 10);
+
+    console.log({ owner });
     const caliverseHotwallet = await erc721.caliverseHotwallet();
     console.log({ caliverseHotwallet });
 
@@ -59,9 +58,6 @@ contract('GeneralERC721V1', (accounts) => {
     // const endTime = Math.floor(Date.now() / 1000) + 10000;
     // const owner = await erc721.owner();
     // const publicMintType = 1;
-    // const _adminOnly = 0;
-    // await erc721.setSaleInfo(startTime, endTime, 0, 100, publicMintType, 10, 10, 1, _adminOnly);
-    // const adminonly = await erc721.adminOnly();
 
     const stakingProxy = await StakingContractV1.at(stakingAddr);
 
@@ -85,12 +81,11 @@ contract('GeneralERC721V1', (accounts) => {
     const endTime = Math.floor(Date.now() / 1000) + 10000;
     const owner = await erc721.owner();
     const allowmintType = 2;
-    const _adminOnly = 0;
     const maxPerAddress = 30;
     const maxPerTx = 10;
-    await erc721.setSaleInfo(startTime, endTime, 0, 100, allowmintType, maxPerAddress, maxPerTx, 1, _adminOnly);
-    const adminonly = await erc721.adminOnly();
-    console.log({ owner, adminonly, erc721addr });
+    await erc721.setSaleInfo(startTime, endTime, 0, 100, allowmintType, maxPerAddress, maxPerTx);
+
+    console.log({ owner, erc721addr });
     await erc721.seedAllowlist([accounts[1]], [10]);
     const stakingProxy = await StakingContractV1.at(StakingProxy.address);
     const walletPair = `0x${accounts[1].slice(2)}${stakingProxy.address.slice(2)}`;

@@ -10,7 +10,6 @@ import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
 import '../libraries/LibSale.sol';
-import '../libraries/LibNFTAdmin.sol';
 import '../StakingContract/StakingContractV1.sol';
 import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 
@@ -27,7 +26,6 @@ contract GeneralERC721V1 is
   uint256 public collectionSize;
   mapping(address => uint256) public numberMinted; // eg. 0x... => 12
   uint256 public nextTokenId;
-  address[] private admins;
   mapping(address => uint256[]) public _holds;
   // _type public: 1, allowlist: 2
   event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
@@ -42,7 +40,6 @@ contract GeneralERC721V1 is
     string memory symbol_,
     uint256 collectionSize_,
     string calldata baseURI_,
-    address admin_,
     address caliverseHotwallet_
   ) public initializer {
     __Ownable_init();
@@ -51,7 +48,6 @@ contract GeneralERC721V1 is
     collectionSize = collectionSize_;
     nextTokenId = 0;
     setBaseURI(baseURI_);
-    admins.push(admin_);
     caliverseHotwallet = caliverseHotwallet_;
   }
 
@@ -81,10 +77,6 @@ contract GeneralERC721V1 is
 
   function limit() public view returns (uint256) {
     return saleInfo.limit;
-  }
-
-  function adminOnly() public view returns (bool) {
-    return saleInfo.adminOnly;
   }
 
   function supportsInterface(
@@ -161,8 +153,7 @@ contract GeneralERC721V1 is
     uint256 limit_,
     uint32 mintType_,
     uint256 maxPerAddr_,
-    uint256 maxPerTx_,
-    bool adminOnly_ // 1, 0
+    uint256 maxPerTx_
   ) external onlyOwner {
     saleInfo.startTime = startTime_;
     saleInfo.endTime = endTime_;
@@ -171,7 +162,6 @@ contract GeneralERC721V1 is
     saleInfo._mintType = mintType_;
     saleInfo.maxPerTx = maxPerTx_;
     saleInfo.maxPerAddr = maxPerAddr_;
-    saleInfo.adminOnly = adminOnly_;
     saleInfo.totalMinted = 0;
     for (uint256 i = 0; i < saleInfo.participants.length; i++) {
       delete saleInfo.mintedDuringSale[saleInfo.participants[i]];
@@ -211,11 +201,7 @@ contract GeneralERC721V1 is
     require(msg.sender == address(externalWallet), 'wrong external wallet');
     require(recoverSig(walletPair, sig) == address(caliverseHotwallet), 'wrong signature');
 
-    if (saleInfo.adminOnly) {
-      LibNFTAdmin.isAdmin(admins);
-    } else {
-      LibSale.ensureCallerIsUser();
-    }
+    LibSale.ensureCallerIsUser();
     uint256[] memory tokenIds = _publicMint(stakingContract, quantity);
     for (uint256 i = 0; i < tokenIds.length; i++) {
       StakingContractV1(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
@@ -279,19 +265,6 @@ contract GeneralERC721V1 is
     return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString(), '.json')) : '';
   }
 
-  function addAdmin(address newAdmin) external isAdmin {
-    admins.push(newAdmin);
-  }
-
-  modifier isAdmin() {
-    LibNFTAdmin.isAdmin(admins);
-    _;
-  }
-
-  function removeAdmin(address address_) external isAdmin {
-    LibNFTAdmin.removeAdmin(admins, address_);
-  }
-
   function balance(address account) public view returns (TokenBalance[] memory) {
     uint256 _balance = balanceOf(account);
     TokenBalance[] memory result = new TokenBalance[](_balance);
@@ -325,6 +298,10 @@ contract GeneralERC721V1 is
     }
 
     return (externalWallet, stakingContract);
+  }
+
+  function setCaliverseHotwallet(address caliverseHotwallet_) public onlyOwner {
+    caliverseHotwallet = caliverseHotwallet_;
   }
 }
 
