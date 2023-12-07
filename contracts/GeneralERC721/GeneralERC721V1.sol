@@ -196,20 +196,20 @@ contract GeneralERC721V1 is
     return ecrecover(messageHash, _v, _r, _s);
   }
 
-  // function publicMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable nonReentrant {
-  //   (address externalWallet, address stakingContract) = splitWalletPair(walletPair);
+  function publicMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable nonReentrant {
+    (address externalWallet, address stakingContract) = splitWalletPair(walletPair);
 
-  //   require(msg.sender == address(externalWallet), 'wrong external wallet');
-  //   require(recoverSig(walletPair, sig) == address(caliverseHotwallet), 'wrong signature');
+    require(msg.sender == address(externalWallet), 'wrong external wallet');
+    require(recoverSig(walletPair, sig) == address(caliverseHotwallet), 'wrong signature');
 
-  //   LibSale.ensureCallerIsUser();
-  //   uint256[] memory tokenIds = _publicMint(stakingContract, quantity);
-  //   for (uint256 i = 0; i < tokenIds.length; i++) {
-  //     StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
-  //   }
+    LibSale.ensureCallerIsUser();
+    uint256[] memory tokenIds = _publicMint(stakingContract, quantity);
+    for (uint256 i = 0; i < tokenIds.length; i++) {
+      StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
+    }
 
-  //   emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
-  // }
+    emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
+  }
 
   function _publicMint(address to, uint256 quantity) private returns (uint256[] memory) {
     LibSale.validatePublicSale(saleInfo, quantity);
