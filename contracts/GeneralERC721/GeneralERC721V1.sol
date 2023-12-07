@@ -10,7 +10,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
 import '../libraries/LibSale.sol';
-import '../StakingContract/StakingContractV1.sol';
+import '../StakingContract/StakingContract.sol';
 import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 
 contract GeneralERC721V1 is
@@ -30,6 +30,7 @@ contract GeneralERC721V1 is
   // _type public: 1, allowlist: 2
   event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
   address public caliverseHotwallet;
+  uint256[50] __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
 
   constructor() {
     _disableInitializers();
@@ -204,7 +205,7 @@ contract GeneralERC721V1 is
     LibSale.ensureCallerIsUser();
     uint256[] memory tokenIds = _publicMint(stakingContract, quantity);
     for (uint256 i = 0; i < tokenIds.length; i++) {
-      StakingContractV1(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
+      StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
     }
 
     emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
@@ -235,7 +236,7 @@ contract GeneralERC721V1 is
     LibSale.refundIfOver(totalPrice);
     payable(owner()).transfer(totalPrice);
     for (uint256 i = 0; i < tokenIds.length; i++) {
-      StakingContractV1(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
+      StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
     }
     emit Purchased(msg.sender, 2, quantity, uint256(saleInfo.price * quantity));
   }
