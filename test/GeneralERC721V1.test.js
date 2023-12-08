@@ -2,8 +2,7 @@ const { Web3 } = require('web3');
 const web3 = new Web3('http://localhost:8545');
 const GeneralERC721V1 = artifacts.require('../contracts/GeneralERC721/GeneralERC721V1.sol');
 const GeneralERC721Factory = artifacts.require('../contracts/GeneralERC721/GeneralERC721Factory.sol');
-const StakingProxy = artifacts.require('../contracts/StakingContract/StakingProxy.sol');
-const StakingContractV1 = artifacts.require('../contracts/StakingContract/StakingContractV1.sol');
+const StakingContract = artifacts.require('../contracts/StakingContract/StakingContract.sol');
 const Bignumber = require('bignumber.js');
 
 contract('GeneralERC721V1', (accounts) => {
@@ -25,9 +24,9 @@ contract('GeneralERC721V1', (accounts) => {
     const caliverseHotwallet = await erc721.caliverseHotwallet();
     console.log({ caliverseHotwallet });
 
-    const stakingProxy = await StakingContractV1.at(StakingProxy.address);
-    await stakingProxy.initialize(erc721addr, { from: accounts[0] });
-    const walletPair = `0x${accounts[1].slice(2)}${stakingProxy.address.slice(2)}`;
+    const staking = await StakingContract.deployed();
+
+    const walletPair = `0x${accounts[1].slice(2)}${staking.address.slice(2)}`;
     const sig = web3.eth.accounts.sign(
       walletPair,
       '0x770be1959183678b32e7ddc233cc888bbb1cc85b8bf74eccac38fe256611a8d8',
@@ -59,7 +58,7 @@ contract('GeneralERC721V1', (accounts) => {
     // const owner = await erc721.owner();
     // const publicMintType = 1;
 
-    const stakingProxy = await StakingContractV1.at(stakingAddr);
+    const stakingProxy = await StakingContract.at(stakingAddr);
 
     // const walletPair = `0x${accounts[1].slice(2)}${stakingProxy.address.slice(2)}`;
     // const sig = web3.eth.accounts.sign(
@@ -87,7 +86,7 @@ contract('GeneralERC721V1', (accounts) => {
 
     console.log({ owner, erc721addr });
     await erc721.seedAllowlist([accounts[1]], [10]);
-    const stakingProxy = await StakingContractV1.at(StakingProxy.address);
+    const stakingProxy = await StakingContract.at(StakingProxy.address);
     const walletPair = `0x${accounts[1].slice(2)}${stakingProxy.address.slice(2)}`;
     const sig = web3.eth.accounts.sign(
       walletPair,

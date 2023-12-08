@@ -111,12 +111,12 @@ contract GeneralERC721V1 is
     nextTokenId = nextTokenId + quantity_;
     numberMinted[msg.sender] = numberMinted[msg.sender] + quantity_;
 
-    addParticipant(msg.sender);
+    _addParticipant(msg.sender);
 
     return tokenIds;
   }
 
-  function addParticipant(address participant) public onlyOwner {
+  function _addParticipant(address participant) private {
     bool isParicipant = false;
     for (uint256 i = 0; i < saleInfo.participants.length; i++) {
       if (saleInfo.participants[i] == participant) {
