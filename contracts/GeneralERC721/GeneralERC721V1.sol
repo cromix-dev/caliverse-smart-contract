@@ -217,7 +217,9 @@ contract GeneralERC721V1 is
 
     uint256[] memory tokenIds = _safeSaleMint(to, quantity);
     LibSale.refundIfOver(totalPrice);
-    payable(owner()).transfer(totalPrice);
+    if (!Address.isContract(owner())) {
+      payable(owner()).transfer(totalPrice);
+    }
     return tokenIds;
   }
 
@@ -234,7 +236,9 @@ contract GeneralERC721V1 is
     saleInfo.allowlist[msg.sender] = saleInfo.allowlist[msg.sender] - quantity;
     uint256[] memory tokenIds = _safeSaleMint(stakingContract, quantity);
     LibSale.refundIfOver(totalPrice);
-    payable(owner()).transfer(totalPrice);
+    if (!Address.isContract(owner())) {
+      payable(owner()).transfer(totalPrice);
+    }
     for (uint256 i = 0; i < tokenIds.length; i++) {
       StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
     }
