@@ -29,11 +29,12 @@ contract('GeneralERC721V1', (accounts) => {
     const walletPair = `0x${accounts[1].slice(2)}${staking.address.slice(2)}`;
     const sig = web3.eth.accounts.sign(
       walletPair,
-      '0x770be1959183678b32e7ddc233cc888bbb1cc85b8bf74eccac38fe256611a8d8',
+      // truffle 에서 0번 계정의 private key 를 가져옴
+      '0xd861ab35388db2d58fc31d156e300145e285bcfd63782e9a95f00532d518b8b6',
     ).signature;
     const quantity = 10;
     const _key = 1;
-    const pubmintResult = await erc721.publicMint(walletPair, quantity, sig, _key, {
+    const pubmintResult = await erc721.publicMint(walletPair, quantity, sig, {
       from: accounts[1],
       value: price.multipliedBy(quantity).toString(),
     });
@@ -42,11 +43,11 @@ contract('GeneralERC721V1', (accounts) => {
     console.log(pubmintResult.receipt.rawLogs.slice(-1)[0]);
 
     const tokenId = 0;
-    console.log('is token staked: ', (await stakingProxy.stakingInfo(erc721addr, accounts[1], tokenId)).toNumber());
-    await stakingProxy.unstake(erc721addr, tokenId, { from: accounts[1] });
-    await erc721.setApprovalForAll(StakingProxy.address, 1, { from: accounts[1] });
-    await stakingProxy.stake(erc721addr, tokenId, { from: accounts[1] });
-    console.log({ erc721addr, 'staking contract address': StakingProxy.address });
+    console.log('is token staked: ', (await staking.stakingInfo(erc721addr, accounts[1], tokenId)).toNumber());
+    await staking.unstake(erc721addr, tokenId, { from: accounts[1] });
+    await erc721.setApprovalForAll(staking.address, 1, { from: accounts[1] });
+    await staking.stake(erc721addr, tokenId, { from: accounts[1] });
+    console.log({ erc721addr, 'staking contract address': staking.address });
   });
   it('test public mint from already deployed contract', async () => {
     console.log('test public mint from already deployed contract');
