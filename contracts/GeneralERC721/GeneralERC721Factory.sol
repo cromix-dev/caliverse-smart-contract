@@ -17,6 +17,8 @@ contract GeneralERC721Factory is Ownable {
   bytes16 private constant HEX_CAPITAL = '0123456789ABCDEF';
 
   constructor(address logic_, string memory baseUri_, address caliverseHotwallet_) {
+    require(logic_ != address(0), 'GeneralERC721Factory: logic_ is zero address');
+    require(caliverseHotwallet_ != address(0), 'GeneralERC721Factory: caliverseHotwallet_ is zero address');
     admin = new ProxyAdmin();
     logic = logic_;
     baseUri = baseUri_;
@@ -53,6 +55,8 @@ contract GeneralERC721Factory is Ownable {
   }
 
   function build(string memory name_, string memory symbol_, uint256 collectionSize_) public {
+    require(logic != address(0), 'GeneralERC721Factory: logic is zero address');
+    require(caliverseHotwallet != address(0), 'GeneralERC721Factory: caliverseHotwallet is zero address');
     TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(logic), address(admin), '');
 
     proxies.push(proxy);
