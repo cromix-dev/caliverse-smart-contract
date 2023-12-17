@@ -7,9 +7,12 @@ const LibNFTAdmin = artifacts.require('../contracts/libraries/LibNFTAdmin.sol');
 const LibSale = artifacts.require('../contracts/libraries/LibSale.sol');
 const StakingContract = artifacts.require('../contracts/StakingContract/StakingContract.sol');
 
-const baseUri = 'https://dev-cdn.caliverse.io/contracts/';
-
 module.exports = async (deployer, network, accounts) => {
+  const baseUri =
+    network == 'mainnet' ? 'https://cdn.caliverse.io/contracts/' : 'https://dev-cdn.caliverse.io/contracts/';
+
+  console.log({ baseUri });
+
   // console.log('deploy address: ', accounts[0]);
   await deployer.deploy(LibNFTAdmin);
   setConfig('deployed.' + network + '.LibNFTAdmin', LibNFTAdmin.address);

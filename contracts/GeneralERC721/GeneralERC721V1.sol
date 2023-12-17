@@ -30,6 +30,7 @@ contract GeneralERC721V1 is
   // _type public: 1, allowlist: 2
   event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
   address public caliverseHotwallet;
+  mapping(address => uint256) public nextNonce;
   uint256[50] __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
 
   constructor() {
@@ -180,11 +181,21 @@ contract GeneralERC721V1 is
     return ECDSA.recover(messageHash, sig);
   }
 
-  function publicMint(bytes memory walletPair, uint256 quantity, bytes memory sig) external payable nonReentrant {
-    (address externalWallet, address stakingContract) = splitWalletPair(walletPair);
-
+  // mintParams: walletAddress(32byte), stakingContract(32byte), chainId(32byte), nonce(32byte), contractAddress(32byte) sig
+  function publicMint(bytes memory data, uint256 quantity, bytes memory sig) external payable nonReentrant {
+    (
+      address externalWallet,
+      address stakingContract,
+      uint256 chainId,
+      uint256 nonce,
+      address contractAddress
+    ) = splitData(data);
+    require(contractAddress == address(this), 'wrong contract address');
+    require(nextNonce[externalWallet] == nonce, 'wrong nonce');
     require(msg.sender == address(externalWallet), 'wrong external wallet');
-    require(recoverSig(walletPair, sig) == address(caliverseHotwallet), 'wrong signature');
+    require(recoverSig(data, sig) == address(caliverseHotwallet), 'wrong signature');
+    uint256 currentChainId = getChainId();
+    require(currentChainId == chainId, 'wrong chain id');
 
     LibSale.ensureCallerIsUser();
     uint256[] memory tokenIds = _publicMint(stakingContract, quantity);
@@ -193,6 +204,15 @@ contract GeneralERC721V1 is
     }
 
     emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
+    nextNonce[externalWallet] = nonce + 1;
+  }
+
+  function getChainId() public view returns (uint256) {
+    uint256 chainId;
+    assembly {
+      chainId := chainid()
+    }
+    return chainId;
   }
 
   function _publicMint(address to, uint256 quantity) private returns (uint256[] memory) {
@@ -207,14 +227,22 @@ contract GeneralERC721V1 is
     return tokenIds;
   }
 
-  function allowMint(
-    bytes memory walletPair,
-    uint256 quantity,
-    bytes memory sig
-  ) external payable nonReentrant callerIsUser {
-    (address externalWallet, address stakingContract) = splitWalletPair(walletPair);
+  function allowMint(bytes memory data, uint256 quantity, bytes memory sig) external payable nonReentrant callerIsUser {
+    (
+      address externalWallet,
+      address stakingContract,
+      uint256 chainId,
+      uint256 nonce,
+      address contractAddress
+    ) = splitData(data);
+    require(contractAddress == address(this), 'wrong contract address');
+    require(nextNonce[externalWallet] == nonce, 'wrong nonce');
     require(msg.sender == address(externalWallet), 'wrong external wallet');
-    require(recoverSig(walletPair, sig) == address(caliverseHotwallet), 'wrong signature');
+    require(recoverSig(data, sig) == address(caliverseHotwallet), 'wrong signature');
+    uint256 currentChainId = getChainId();
+    require(currentChainId == chainId, 'wrong chain id');
+    require(nextNonce[externalWallet] == nonce, 'wrong nonce');
+
     LibSale.validatePrivateSale(saleInfo, quantity);
     uint256 totalPrice = uint256(saleInfo.price * quantity);
     saleInfo.allowlist[msg.sender] = saleInfo.allowlist[msg.sender] - quantity;
@@ -227,6 +255,7 @@ contract GeneralERC721V1 is
       StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
     }
     emit Purchased(msg.sender, 2, quantity, uint256(saleInfo.price * quantity));
+    nextNonce[externalWallet] = nonce + 1;
   }
 
   function seedAllowlist(address[] calldata addresses, uint256[] calldata numSlots) external onlyOwner {
@@ -274,19 +303,29 @@ contract GeneralERC721V1 is
     return saleInfo.totalMinted;
   }
 
-  function splitWalletPair(
-    bytes memory walletPair
-  ) internal pure returns (address externalWallet, address stakingContract) {
+  // data: externalWallet(32byte), stakingContract(32byte), quantity(32byte), chainId(32byte), nonce(32byte)
+  function splitData(
+    bytes memory data
+  )
+    public
+    pure
+    returns (address externalWallet, address stakingContract, uint256 chainId, uint256 nonce, address contractAddress)
+  {
     // require(walletPair.length == 64);
 
     assembly {
       // first 32 bytes, after the length prefix.
-      externalWallet := shr(96, mload(add(walletPair, 32)))
+      externalWallet := mload(add(data, 32))
       // second 32 bytes.
-      stakingContract := shr(96, mload(add(walletPair, 52)))
+      stakingContract := mload(add(data, 64))
+      // second 32 bytes.
+      chainId := mload(add(data, 96))
+      // second 32 bytes.
+      nonce := mload(add(data, 128))
+      contractAddress := mload(add(data, 160))
     }
 
-    return (externalWallet, stakingContract);
+    return (externalWallet, stakingContract, chainId, nonce, contractAddress);
   }
 
   function setCaliverseHotwallet(address caliverseHotwallet_) public onlyOwner {

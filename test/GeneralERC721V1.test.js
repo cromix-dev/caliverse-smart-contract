@@ -6,11 +6,19 @@ const StakingContract = artifacts.require('../contracts/StakingContract/StakingC
 const Bignumber = require('bignumber.js');
 
 contract('GeneralERC721V1', (accounts) => {
+  it('get chain id', async () => {
+    const factory = await GeneralERC721Factory.deployed();
+    const result = await factory.build('name', 'symbol', 100);
+    const erc721addr = result.receipt.rawLogs[0].address;
+    const erc721 = await GeneralERC721V1.at(erc721addr);
+
+    const chainId = await erc721.getChainId();
+    console.log(chainId.toNumber());
+  });
   it.only('test public mint from newly deployed contract', async () => {
     const factory = await GeneralERC721Factory.deployed();
     const result = await factory.build('name', 'symbol', 100);
     const erc721addr = result.receipt.rawLogs[0].address;
-
     const erc721 = await GeneralERC721V1.at(erc721addr);
     const startTime = Math.floor(Date.now() / 1000) - 10000;
     const endTime = Math.floor(Date.now() / 1000) + 10000;
@@ -26,19 +34,38 @@ contract('GeneralERC721V1', (accounts) => {
 
     const staking = await StakingContract.deployed();
 
-    const walletPair = `0x${accounts[1].slice(2)}${staking.address.slice(2)}`;
-    const sig = web3.eth.accounts.sign(
-      walletPair,
-      // truffle 에서 0번 계정의 private key 를 가져옴
-      '0xd861ab35388db2d58fc31d156e300145e285bcfd63782e9a95f00532d518b8b6',
-    ).signature;
     const quantity = 10;
-    const _key = 1;
-    const pubmintResult = await erc721.publicMint(walletPair, quantity, sig, {
+    const eoabyte32 = accounts[1].slice(2).padStart(64, 0);
+    const stakingAddrbyte32 = staking.address.slice(2).padStart(64, 0);
+    const chainIdBN = await erc721.getChainId();
+    console.log(chainIdBN.toNumber());
+    const chainIdbyte32 = web3.utils.numberToHex(chainIdBN.toNumber()).slice(2).padStart(64, 0);
+    const nonce = 1;
+    const noncebyte32 = web3.utils.numberToHex(nonce).slice(2).padStart(64, 0);
+    const data =
+      `0x` + eoabyte32 + stakingAddrbyte32 + chainIdbyte32 + noncebyte32 + erc721addr.slice(2).padStart(64, 0);
+    console.log('민팅 데이터: ', { data });
+
+    const tmpresult = await erc721.splitData(data);
+    console.log(
+      { tmpresult, erc721addr },
+      tmpresult[2].toNumber(),
+      tmpresult[3].toNumber(),
+      tmpresult[4].toNumber(),
+      tmpresult[5],
+    );
+
+    const sig = web3.eth.accounts.sign(
+      data,
+      // truffle 에서 0번 계정의 private key 를 가져옴
+      //0x06a993a51c1f7943d2829bF6A23d92dd8cF7F190
+      '0x554ed756dbb3e7ed0cfe4b68bc7b31a87a0b483d287550ef3980e065f7e131d1',
+    ).signature;
+    const pubmintResult = await erc721.publicMint(data, sig, {
       from: accounts[1],
       value: price.multipliedBy(quantity).toString(),
     });
-    const logs = [];
+
     console.log(pubmintResult.logs.slice(-1)[0]);
     console.log(pubmintResult.receipt.rawLogs.slice(-1)[0]);
 
