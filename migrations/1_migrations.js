@@ -1,5 +1,4 @@
 // QA 배포: WALLET_PK=$CALIVERSE_QA_WALLET_PK APP_ENV=qa npx truffle migrate -f 1 --to 1 --network mainnet --reset
-// QA 배포: WALLET_PK=$CALIVERSE_QA_WALLET_PK APP_ENV=qa npx truffle migrate -f 1 --to 1 --network mainnet --reset
 // DEV 배포: WALLET_PK=$CALIVERSE_SEPOLIA_TEST_WALLET_PK APP_ENV=dev npx truffle migrate -f 1 --to 1 --network sepolia --reset
 const { setConfig } = require('./config.js');
 const GeneralERC721V1 = artifacts.require('../contracts/GeneralERC721/GeneralERC721V1.sol');
@@ -16,7 +15,7 @@ module.exports = async (deployer, network, accounts) => {
       ? 'https://qa-cdn.caliverse.io/contracts/'
       : 'https://dev-cdn.caliverse.io/contracts/';
 
-  console.log({ baseUri });
+  console.log({ baseUri, accounts });
 
   // console.log('deploy address: ', accounts[0]);
   await deployer.deploy(LibNFTAdmin);

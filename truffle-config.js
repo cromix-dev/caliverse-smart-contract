@@ -18,20 +18,7 @@ module.exports = {
       gas: 10000000,
       // skipDryRun: true,
       // gasPrice 안쓰면 에러생김
-      gasPrice: 20000000000,
-      confirmations: 1,
-      networkCheckTimeout: 10000000,
-    },
-    goerli: {
-      provider: function () {
-        return new HDWalletProvider(WALLET_PK, 'https://goerli.infura.io/v3/' + INFURA_KEY);
-      },
-      port: 8545,
-      network_id: '5',
-      gas: 10000000,
-      skipDryRun: true,
-      // gasPrice 안쓰면 에러생김
-      // gasPrice: 20000000000,
+      gasPrice: 82423585625,
       confirmations: 1,
       networkCheckTimeout: 10000000,
     },
