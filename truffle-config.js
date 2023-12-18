@@ -17,8 +17,8 @@ module.exports = {
       network_id: 11155111,
       gas: 10000000,
       // skipDryRun: true,
-      // gasPrice 안쓰면 에러생김
-      gasPrice: 20000000000,
+      // gasPrice 안쓰면 에러생김 https://etherscan.io/gastracker
+      gasPrice: 20 * 1e9,
       // gasPrice: 82423585625,
       confirmations: 1,
       networkCheckTimeout: 10000000,

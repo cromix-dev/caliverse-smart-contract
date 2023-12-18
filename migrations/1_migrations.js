@@ -1,3 +1,4 @@
+// PROD 배포: WALLET_PK= APP_ENV=prod npx truffle migrate -f 1 --to 1 --network mainnet --reset
 // QA 배포: WALLET_PK=$CALIVERSE_QA_WALLET_PK APP_ENV=qa npx truffle migrate -f 1 --to 1 --network mainnet --reset
 // DEV 배포: WALLET_PK=$CALIVERSE_SEPOLIA_TEST_WALLET_PK APP_ENV=dev npx truffle migrate -f 1 --to 1 --network sepolia --reset
 const { setConfig } = require('./config.js');
