@@ -30,7 +30,7 @@ contract GeneralERC721V1 is
   // _type public: 1, allowlist: 2
   event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
   address public caliverseHotwallet;
-  mapping(address => uint256) public nextNonce;
+  mapping(address => uint256) public nextMinNonce;
   uint256[50] __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
 
   constructor() {
@@ -191,7 +191,7 @@ contract GeneralERC721V1 is
       address contractAddress
     ) = splitData(data);
     require(contractAddress == address(this), 'wrong contract address');
-    require(nextNonce[externalWallet] == nonce, 'wrong nonce');
+    require(nextMinNonce[externalWallet] <= nonce, 'wrong nonce');
     require(msg.sender == address(externalWallet), 'wrong external wallet');
     require(recoverSig(data, sig) == address(caliverseHotwallet), 'wrong signature');
     uint256 currentChainId = getChainId();
@@ -204,7 +204,7 @@ contract GeneralERC721V1 is
     }
 
     emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
-    nextNonce[externalWallet] = nonce + 1;
+    nextMinNonce[externalWallet] = nonce + 1;
   }
 
   function getChainId() public view returns (uint256) {
@@ -236,12 +236,11 @@ contract GeneralERC721V1 is
       address contractAddress
     ) = splitData(data);
     require(contractAddress == address(this), 'wrong contract address');
-    require(nextNonce[externalWallet] == nonce, 'wrong nonce');
+    require(nextMinNonce[externalWallet] <= nonce, 'wrong nonce');
     require(msg.sender == address(externalWallet), 'wrong external wallet');
     require(recoverSig(data, sig) == address(caliverseHotwallet), 'wrong signature');
     uint256 currentChainId = getChainId();
     require(currentChainId == chainId, 'wrong chain id');
-    require(nextNonce[externalWallet] == nonce, 'wrong nonce');
 
     LibSale.validatePrivateSale(saleInfo, quantity);
     uint256 totalPrice = uint256(saleInfo.price * quantity);
@@ -255,7 +254,7 @@ contract GeneralERC721V1 is
       StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
     }
     emit Purchased(msg.sender, 2, quantity, uint256(saleInfo.price * quantity));
-    nextNonce[externalWallet] = nonce + 1;
+    nextMinNonce[externalWallet] = nonce + 1;
   }
 
   function seedAllowlist(address[] calldata addresses, uint256[] calldata numSlots) external onlyOwner {
