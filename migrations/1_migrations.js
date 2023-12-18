@@ -16,8 +16,8 @@ module.exports = async (deployer, network, accounts) => {
       : 'https://dev-cdn.caliverse.io/contracts/';
 
   console.log({ baseUri, accounts });
+  console.log('deploy address: ', accounts[0]);
 
-  // console.log('deploy address: ', accounts[0]);
   await deployer.deploy(LibNFTAdmin);
   setConfig('deployed.' + network + '.LibNFTAdmin', LibNFTAdmin.address);
   await deployer.deploy(LibSale);
