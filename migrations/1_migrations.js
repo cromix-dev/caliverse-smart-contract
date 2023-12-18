@@ -27,8 +27,8 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.link(LibSale, GeneralERC721V1);
 
   // START 이미 배포된 라이브러리 사용하고 싶은 경우
-  // const libnftAdmin = await LibNFTAdmin.at('0xBdEA81ac0A9658416fa669A0A8e439fAb9A519Cc');
-  // const libsale = await LibSale.at('0x35D22D1C9F341105f1813E1E8725f6AD6DE6E815');
+  // const libnftAdmin = await LibNFTAdmin.at('');
+  // const libsale = await LibSale.at('');
   // await deployer.link(libnftAdmin, GeneralERC721V1);
   // await deployer.link(libsale, GeneralERC721V1);
   // END 이미 배포된 라이브러리 사용하고 싶은 경우
