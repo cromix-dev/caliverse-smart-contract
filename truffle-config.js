@@ -18,7 +18,8 @@ module.exports = {
       gas: 10000000,
       // skipDryRun: true,
       // gasPrice 안쓰면 에러생김
-      gasPrice: 82423585625,
+      gasPrice: 20000000000,
+      // gasPrice: 82423585625,
       confirmations: 1,
       networkCheckTimeout: 10000000,
     },
