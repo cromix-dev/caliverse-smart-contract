@@ -5,6 +5,16 @@ const GeneralERC721Factory = artifacts.require('../contracts/GeneralERC721/Gener
 const StakingContract = artifacts.require('../contracts/StakingContract/StakingContract.sol');
 const Bignumber = require('bignumber.js');
 
+const makeData = (eoaAddress, erc721addr, stakingAddress, chainId, nonce) => {
+  const eoabyte32 = eoaAddress.slice(2).padStart(64, 0);
+  const stakingAddrbyte32 = stakingAddress.slice(2).padStart(64, 0);
+  const chainIdbyte32 = web3.utils.numberToHex(chainId).slice(2).padStart(64, 0);
+  const noncebyte32 = web3.utils.numberToHex(nonce).slice(2).padStart(64, 0);
+  const data = `0x` + eoabyte32 + stakingAddrbyte32 + chainIdbyte32 + noncebyte32 + erc721addr.slice(2).padStart(64, 0);
+
+  return data;
+};
+
 contract('GeneralERC721V1', (accounts) => {
   it('get chain id', async () => {
     const factory = await GeneralERC721Factory.deployed();
@@ -15,7 +25,7 @@ contract('GeneralERC721V1', (accounts) => {
     const chainId = await erc721.getChainId();
     console.log(chainId.toNumber());
   });
-  it.only('test public mint from newly deployed contract', async () => {
+  it('test public mint from newly deployed contract', async () => {
     const factory = await GeneralERC721Factory.deployed();
     const result = await factory.build('name', 'symbol', 100);
     const erc721addr = result.receipt.rawLogs[0].address;
@@ -66,6 +76,7 @@ contract('GeneralERC721V1', (accounts) => {
       value: price.multipliedBy(quantity).toString(),
     });
 
+    console.log(pubmintResult);
     console.log(pubmintResult.logs.slice(-1)[0]);
     console.log(pubmintResult.receipt.rawLogs.slice(-1)[0]);
 
@@ -86,8 +97,6 @@ contract('GeneralERC721V1', (accounts) => {
     // const owner = await erc721.owner();
     // const publicMintType = 1;
 
-    const stakingProxy = await StakingContract.at(stakingAddr);
-
     // const walletPair = `0x${accounts[1].slice(2)}${stakingProxy.address.slice(2)}`;
     // const sig = web3.eth.accounts.sign(
     //   walletPair,
@@ -99,7 +108,7 @@ contract('GeneralERC721V1', (accounts) => {
     await stakingProxy.unstake(erc721addr, tokenId, { from: accounts[1] });
   });
 
-  it('allowlist mint', async () => {
+  it.only('allowlist mint', async () => {
     const factory = await GeneralERC721Factory.deployed();
     const result = await factory.build('name', 'symbol', 100);
     const erc721addr = result.receipt.rawLogs[0].address;
@@ -114,24 +123,30 @@ contract('GeneralERC721V1', (accounts) => {
 
     console.log({ owner, erc721addr });
     await erc721.seedAllowlist([accounts[1]], [10]);
-    const stakingProxy = await StakingContract.at(StakingProxy.address);
-    const walletPair = `0x${accounts[1].slice(2)}${stakingProxy.address.slice(2)}`;
+    const staking = await StakingContract.deployed();
+    const chainIdBN = await erc721.getChainId();
+    console.log(chainIdBN.toNumber());
+    const data = makeData(accounts[1], erc721addr, staking.address, chainIdBN.toNumber(), 1);
+    console.log(data);
     const sig = web3.eth.accounts.sign(
-      walletPair,
-      '0x770be1959183678b32e7ddc233cc888bbb1cc85b8bf74eccac38fe256611a8d8',
+      data,
+      '0xd677ee5cbe63ef0e082d43cc2e9eb1bd4228ddca6dcca9586529ba9e87bf82a7',
     ).signature;
-    await erc721.allowMint.call(walletPair, 10, sig, { from: accounts[1] });
-    let allowamount = (await erc721.allowlist(accounts[1])).toNumber();
-    console.log({ allowamount });
-    await erc721.seedAllowlist([accounts[1]], [0]);
-    allowamount = (await erc721.allowlist(accounts[1])).toNumber();
-    console.log({ allowamount, 'accounts[1]': accounts[1] });
 
-    try {
-      await erc721.allowMint.call(walletPair, 10, sig, { from: accounts[1] });
-    } catch (err) {
-      console.log({ err });
-      assert.equal(err.message, 'VM Exception while processing transaction: revert not eligible for allowlist mint');
-    }
+    const tx = await erc721.allowMint(data, 1, sig, { from: accounts[1] });
+    // const gasUsed = await web3.eth.estimateGas({ from: accounts[1], to: tx.receipt.to, data: tx.receipt.input });
+    console.log('gas used: ', tx.receipt.gasUsed); //342052 이상적: 167,264
+    // let allowamount = (await erc721.allowlist(accounts[1])).toNumber();
+    // console.log({ allowamount });
+    // await erc721.seedAllowlist([accounts[1]], [0]);
+    // allowamount = (await erc721.allowlist(accounts[1])).toNumber();
+    // console.log({ allowamount, 'accounts[1]': accounts[1] });
+
+    // try {
+    //   await erc721.allowMint.call(data, 10, sig, { from: accounts[1] });
+    // } catch (err) {
+    //   console.log({ err });
+    //   assert.equal(err.message, 'VM Exception while processing transaction: revert not eligible for allowlist mint');
+    // }
   });
 });
