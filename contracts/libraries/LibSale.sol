@@ -50,6 +50,5 @@ struct SaleInfo {
   uint256 maxPerTx;
   uint32 _mintType; // 1: public sale, 2: allow sale
   mapping(address => uint256) mintedDuringSale;
-  mapping(address => mapping(uint256 => bool)) usedNonce;
   uint256 totalMinted;
 }

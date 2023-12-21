@@ -22,19 +22,6 @@ contract GeneralERC721V1 is
   EIP712Upgradeable
 {
   using Strings for uint256;
-  SaleInfo private saleInfo;
-  uint256 public collectionSize;
-  uint256 public nextTokenId;
-  // _type public: 1, allowlist: 2
-  event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
-  address public caliverseHotwallet;
-  mapping(address => uint256) public nextMinNonce;
-  uint256 public totalSupply;
-  bytes32 constant MintData_TYPEHASH =
-    keccak256(
-      'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256[] nonces,uint256 quantity)'
-    );
-
   struct MintData {
     uint32 mintType; // 1: public sale, 2: allow sale
     address externalWallet;
@@ -42,6 +29,18 @@ contract GeneralERC721V1 is
     uint256[] nonces;
     uint256 quantity;
   }
+  SaleInfo private saleInfo;
+  uint256 public collectionSize;
+  uint256 public nextTokenId;
+  // _type public: 1, allowlist: 2
+  event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
+  address public caliverseHotwallet;
+  mapping(address => mapping(uint256 => bool)) usedNonce;
+  uint256 public totalSupply;
+  bytes32 constant MintData_TYPEHASH =
+    keccak256(
+      'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256[] nonces,uint256 quantity)'
+    );
   uint256[50] private __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
 
   constructor() {
@@ -66,7 +65,7 @@ contract GeneralERC721V1 is
   }
 
   function nonceUsed(address address_, uint256 nonce) public view returns (bool) {
-    return saleInfo.usedNonce[address_][nonce];
+    return usedNonce[address_][nonce];
   }
 
   function startTime() public view returns (uint32) {
@@ -187,7 +186,7 @@ contract GeneralERC721V1 is
 
     emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
     for (uint256 i = 0; i < unusedNonce.length; i++) {
-      saleInfo.usedNonce[externalWallet][unusedNonce[i]] = true;
+      usedNonce[externalWallet][unusedNonce[i]] = true;
     }
   }
 
@@ -222,7 +221,7 @@ contract GeneralERC721V1 is
 
     uint256 unusedNonceCount = 0;
     for (uint256 i = 0; i < nonces.length; i++) {
-      if (!saleInfo.usedNonce[externalWallet][nonces[i]]) {
+      if (!usedNonce[externalWallet][nonces[i]]) {
         unusedNonces[unusedNonceCount] = nonces[i];
         unusedNonceCount++;
       }
@@ -259,7 +258,7 @@ contract GeneralERC721V1 is
     emit Purchased(msg.sender, 2, quantity, uint256(saleInfo.price * quantity));
 
     for (uint256 i = 0; i < unusedNonce.length; i++) {
-      saleInfo.usedNonce[externalWallet][unusedNonce[i]] = true;
+      usedNonce[externalWallet][unusedNonce[i]] = true;
     }
   }
 
