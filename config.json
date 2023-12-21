@@ -29,10 +29,10 @@
       "StakingContract": "0x2f3Ff2Aec18F0D02675E9c48fc64890D9c2e3468"
     },
     "development": {
-      "LibSale": "0xfF1FC2BaEdFCF142c291FF03E8f7D97BD6557086",
-      "GeneralERC721V1": "0x7757fc63a115a4ff49768691a0193fEA66034A1E",
-      "GeneralERC721Factory": "0xEf66001D6642d04511edB797d49F8770c2009978",
-      "StakingContract": "0x1579Bd234c5D2aCB62841cAbbE25AE67e76Da9D0"
+      "LibSale": "0x0b3DfBe51AFb4f44b46D044cb49DeEc828F2285e",
+      "GeneralERC721V1": "0x35b7C2DE9C280794aB463d4B22c566e9326405f8",
+      "GeneralERC721Factory": "0xD395Ea7fF70A6Bbe690b1a2a6Fb6A42a33611fF3",
+      "StakingContract": "0x2C94FfCf5CC22A07fB65eD0c1a2671ec766Df167"
     }
   }
 }

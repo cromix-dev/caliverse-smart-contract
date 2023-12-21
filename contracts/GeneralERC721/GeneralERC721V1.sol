@@ -205,6 +205,8 @@ contract GeneralERC721V1 is
       if (!usedNonce[externalWallet][nonces[i]] && usedCnt < quantity) {
         usedCnt++;
         usedNonce[externalWallet][nonces[i]] = true;
+      } else {
+        continue;
       }
     }
 
