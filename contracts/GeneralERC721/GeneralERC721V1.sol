@@ -60,6 +60,7 @@ contract GeneralERC721V1 is
     setBaseURI(baseURI_);
     caliverseHotwallet = caliverseHotwallet_;
     __EIP712_init(name_, 'V1');
+    totalSupply = 0;
   }
 
   function nonceUsed(address address_, uint256 nonce) public view returns (bool) {
@@ -91,8 +92,8 @@ contract GeneralERC721V1 is
     _;
   }
 
-  function _safeSaleMint(address to, uint256 quantity_) private returns (uint256[] memory) {
-    uint256[] memory tokenIds = _safeMintMany(to, quantity_);
+  function _safeSaleMint(address to, uint256 quantity_) private returns (uint256[] memory tokenIds) {
+    tokenIds = _safeMintMany(to, quantity_);
     saleInfo.totalMinted = saleInfo.totalMinted + quantity_;
 
     return tokenIds;
@@ -176,7 +177,7 @@ contract GeneralERC721V1 is
     uint256 totalPrice = uint256(saleInfo.price * quantity);
     uint256[] memory tokenIds = _safeSaleMint(stakingContract, quantity);
     LibSale.refundIfOver(totalPrice);
-    uint256 usedCnt = useNonce(externalWallet, nonces);
+    uint256 usedCnt = useNonce(externalWallet, nonces, quantity);
     require(usedCnt >= quantity, 'invalid nonce');
     addStakingInfo(externalWallet, stakingContract, tokenIds);
 
@@ -195,21 +196,13 @@ contract GeneralERC721V1 is
     return chainId;
   }
 
-  function _publicMint(address to, uint256 quantity) private returns (uint256[] memory) {
-    LibSale.validatePublicSale(saleInfo, quantity);
-    uint256 totalPrice = uint256(saleInfo.price * quantity);
-
-    uint256[] memory tokenIds = _safeSaleMint(to, quantity);
-    LibSale.refundIfOver(totalPrice);
-    if (!Address.isContract(owner())) {
-      payable(owner()).transfer(totalPrice);
-    }
-    return tokenIds;
-  }
-
-  function useNonce(address externalWallet, uint256[] calldata nonces) private returns (uint256 usedCnt) {
+  function useNonce(
+    address externalWallet,
+    uint256[] calldata nonces,
+    uint256 quantity
+  ) private returns (uint256 usedCnt) {
     for (uint256 i = 0; i < nonces.length; i++) {
-      if (!usedNonce[externalWallet][nonces[i]]) {
+      if (!usedNonce[externalWallet][nonces[i]] && usedCnt < quantity) {
         usedCnt++;
         usedNonce[externalWallet][nonces[i]] = true;
       }
@@ -243,7 +236,7 @@ contract GeneralERC721V1 is
 
     LibSale.validatePrivateSale(saleInfo, quantity);
     uint256 totalPrice = uint256(saleInfo.price * quantity);
-    uint256 usedCnt = useNonce(externalWallet, nonces);
+    uint256 usedCnt = useNonce(externalWallet, nonces, quantity);
     require(usedCnt >= quantity, 'not eligible for allowlist mint');
 
     uint256[] memory tokenIds = _safeSaleMint(stakingContract, quantity);
