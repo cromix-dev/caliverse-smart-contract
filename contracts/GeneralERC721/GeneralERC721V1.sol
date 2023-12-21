@@ -174,20 +174,15 @@ contract GeneralERC721V1 is
     bytes memory sig
   ) external payable nonReentrant {
     require(msg.sender == address(externalWallet), 'wrong external wallet');
-    bytes32 structHash = hashMintData(MintData(2, externalWallet, stakingContract, nonces, quantity));
-    address signer = ECDSA.recover(_hashTypedDataV4(structHash), sig);
-    require(signer == caliverseHotwallet, 'wrong signature');
-    uint256[] memory unusedNonce = unUsedNonce(externalWallet, nonces);
-    require(unusedNonce.length >= quantity, 'not enough allowlist');
+    validateSignature(1, externalWallet, stakingContract, nonces, quantity, sig);
+    uint256 usedCnt = useNonce(externalWallet, nonces);
+    require(usedCnt >= quantity, 'invalid nonce');
 
     LibSale.ensureCallerIsUser();
     uint256[] memory tokenIds = _publicMint(stakingContract, quantity);
     addStakingInfo(externalWallet, stakingContract, tokenIds);
 
     emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
-    for (uint256 i = 0; i < unusedNonce.length; i++) {
-      usedNonce[externalWallet][unusedNonce[i]] = true;
-    }
   }
 
   function addStakingInfo(address externalWallet, address stakingContract, uint256[] memory tokenIds) private {
@@ -216,18 +211,28 @@ contract GeneralERC721V1 is
     return tokenIds;
   }
 
-  function unUsedNonce(address externalWallet, uint256[] calldata nonces) private view returns (uint256[] memory) {
-    uint256[] memory unusedNonces = new uint256[](nonces.length);
-
-    uint256 unusedNonceCount = 0;
+  function useNonce(address externalWallet, uint256[] calldata nonces) private returns (uint256 usedCnt) {
     for (uint256 i = 0; i < nonces.length; i++) {
       if (!usedNonce[externalWallet][nonces[i]]) {
-        unusedNonces[unusedNonceCount] = nonces[i];
-        unusedNonceCount++;
+        usedCnt++;
+        usedNonce[externalWallet][nonces[i]] = true;
       }
     }
 
-    return unusedNonces;
+    return usedCnt;
+  }
+
+  function validateSignature(
+    uint32 mintType,
+    address externalWallet,
+    address stakingContract,
+    uint256[] calldata nonces,
+    uint256 quantity,
+    bytes memory sig
+  ) internal view {
+    bytes32 structHash = hashMintData(MintData(mintType, externalWallet, stakingContract, nonces, quantity));
+    address signer = ECDSA.recover(_hashTypedDataV4(structHash), sig);
+    require(signer == caliverseHotwallet, 'wrong signature');
   }
 
   function allowMint(
@@ -238,16 +243,13 @@ contract GeneralERC721V1 is
     bytes memory sig
   ) external payable nonReentrant callerIsUser {
     require(msg.sender == address(externalWallet), 'wrong external wallet');
-
-    bytes32 structHash = hashMintData(MintData(2, externalWallet, stakingContract, nonces, quantity));
-    address signer = ECDSA.recover(_hashTypedDataV4(structHash), sig);
-    require(signer == caliverseHotwallet, 'wrong signature');
+    validateSignature(2, externalWallet, stakingContract, nonces, quantity, sig);
 
     LibSale.validatePrivateSale(saleInfo, quantity);
     uint256 totalPrice = uint256(saleInfo.price * quantity);
 
-    uint256[] memory unusedNonce = unUsedNonce(externalWallet, nonces);
-    require(unusedNonce.length >= quantity, 'not enough allowlist');
+    uint256 usedCnt = useNonce(externalWallet, nonces);
+    require(usedCnt >= quantity, 'not eligible for allowlist mint');
 
     uint256[] memory tokenIds = _safeSaleMint(stakingContract, quantity);
     LibSale.refundIfOver(totalPrice);
@@ -256,10 +258,6 @@ contract GeneralERC721V1 is
     }
     addStakingInfo(externalWallet, stakingContract, tokenIds);
     emit Purchased(msg.sender, 2, quantity, uint256(saleInfo.price * quantity));
-
-    for (uint256 i = 0; i < unusedNonce.length; i++) {
-      usedNonce[externalWallet][unusedNonce[i]] = true;
-    }
   }
 
   function mintTo(address[] memory addresses, uint256[] memory amounts) public nonReentrant onlyOwner {

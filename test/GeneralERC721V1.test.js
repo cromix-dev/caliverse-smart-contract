@@ -47,9 +47,20 @@ const makeData = (mintType, eoaAddress, stakingAddress, nonces, quantity, contra
   return data;
 };
 
-const Account0PK = '65304613e5b307934dfe50ac9f646106030820cdcc2df8d42e4c4c74b44262df';
-
 contract('GeneralERC721V1', (accounts) => {
+  let factory, erc721;
+  const Account0PK = '0x5915dbddbeb8a44c689dd2e3a8e660042ac2a8c68d80f47f304211d4a8a8b131'.replace(/^0x/, '');
+  const maxNFT = 200;
+
+  beforeEach(async () => {
+    factory = await GeneralERC721Factory.deployed();
+    const result = await factory.build('name', 'symbol', maxNFT);
+    const erc721addr = result.receipt.rawLogs[0].address;
+    erc721 = await GeneralERC721V1.at(erc721addr);
+    const owner = await erc721.owner();
+    console.log({ owner, erc721addr });
+  });
+
   it('get chain id', async () => {
     const factory = await GeneralERC721Factory.deployed();
     const result = await factory.build('name', 'symbol', 100);
@@ -60,86 +71,63 @@ contract('GeneralERC721V1', (accounts) => {
     console.log(chainId.toNumber());
   });
   it('test public mint from newly deployed contract', async () => {
-    const factory = await GeneralERC721Factory.deployed();
-    const result = await factory.build('name', 'symbol', 100);
-    const erc721addr = result.receipt.rawLogs[0].address;
-    const erc721 = await GeneralERC721V1.at(erc721addr);
+    const csvWriter = createObjectCsvWriter({
+      path: path.resolve(__dirname, './result.csv'),
+      header: ['account', 'quantity', 'gasUsed'],
+    });
+    const nonces = _.range(0, maxNFT);
     const startTime = Math.floor(Date.now() / 1000) - 10000;
     const endTime = Math.floor(Date.now() / 1000) + 10000;
-    const owner = await erc721.owner();
-    const publicMintType = 1;
-
-    const price = new Bignumber(0.01e18);
-    await erc721.setSaleInfo(startTime, endTime, price.toString(), 100, publicMintType, 10, 10);
-
-    console.log({ owner });
-    const caliverseHotwallet = await erc721.caliverseHotwallet();
-    console.log({ caliverseHotwallet });
+    const saleLimit = maxNFT;
+    const price = 0.0001 * 1e18;
+    const mintType = 1; // public sale
+    const maxPerAddress = maxNFT;
+    const maxPerTx = maxNFT;
+    await erc721.setSaleInfo(startTime, endTime, price, saleLimit, mintType, maxPerAddress, maxPerTx);
 
     const staking = await StakingContract.deployed();
-
-    const quantity = 10;
-    const eoabyte32 = accounts[1].slice(2).padStart(64, 0);
-    const stakingAddrbyte32 = staking.address.slice(2).padStart(64, 0);
+    const stakingContract = staking.address;
     const chainIdBN = await erc721.getChainId();
-    console.log(chainIdBN.toNumber());
-    const chainIdbyte32 = web3.utils.numberToHex(chainIdBN.toNumber()).slice(2).padStart(64, 0);
-    const nonce = 1;
-    const noncebyte32 = web3.utils.numberToHex(nonce).slice(2).padStart(64, 0);
-    const data =
-      `0x` + eoabyte32 + stakingAddrbyte32 + chainIdbyte32 + noncebyte32 + erc721addr.slice(2).padStart(64, 0);
-    console.log('민팅 데이터: ', { data });
+    const chainId = chainIdBN.toNumber();
 
-    const tmpresult = await erc721.splitData(data);
-    console.log(
-      { tmpresult, erc721addr },
-      tmpresult[2].toNumber(),
-      tmpresult[3].toNumber(),
-      tmpresult[4].toNumber(),
-      tmpresult[5],
-    );
+    const mint = async (id, account, quantity) => {
+      console.log('mint: ', { id, account, quantity });
+      const externalWalletAddress = account;
+      const _nonces = nonces.slice(0, quantity);
+      nonces.shift(quantity);
+      const data = makeData(
+        mintType,
+        externalWalletAddress,
+        stakingContract,
+        _nonces,
+        quantity,
+        erc721.address,
+        chainId,
+      );
+      const sig = signTypedData({
+        data,
+        version: SignTypedDataVersion.V4,
+        privateKey: Buffer.from(Account0PK, 'hex'),
+      });
 
-    const sig = web3.eth.accounts.sign(
-      data,
-      // truffle 에서 0번 계정의 private key 를 가져옴
-      //0x06a993a51c1f7943d2829bF6A23d92dd8cF7F190
-      Account0PK,
-    ).signature;
-    const pubmintResult = await erc721.publicMint(data, sig, {
-      from: accounts[1],
-      value: price.multipliedBy(quantity).toString(),
-    });
+      const tx = await erc721.publicMint(externalWalletAddress, stakingContract, _nonces, quantity, sig, {
+        value: price * quantity,
+        from: account,
+      });
 
-    console.log(pubmintResult);
-    console.log(pubmintResult.logs.slice(-1)[0]);
-    console.log(pubmintResult.receipt.rawLogs.slice(-1)[0]);
+      console.log(`TX ${id} mined: `, tx.receipt.gasUsed);
+      await csvWriter.writeRecords([{ account, quantity, gasUsed: tx.receipt.gasUsed }]);
+    };
+
+    await mint(0, accounts[1], 1);
+    await mint(1, accounts[1], 1);
 
     const tokenId = 0;
-    console.log('is token staked: ', (await staking.stakingInfo(erc721addr, accounts[1], tokenId)).toNumber());
-    await staking.unstake(erc721addr, tokenId, { from: accounts[1] });
+    console.log('is token staked: ', (await staking.stakingInfo(erc721.address, accounts[1], tokenId)).toNumber());
+    await staking.unstake(erc721.address, tokenId, { from: accounts[1] });
     await erc721.setApprovalForAll(staking.address, 1, { from: accounts[1] });
-    await staking.stake(erc721addr, tokenId, { from: accounts[1] });
-    console.log({ erc721addr, 'staking contract address': staking.address });
-  });
-  it('test public mint from already deployed contract', async () => {
-    console.log('test public mint from already deployed contract');
-    const erc721addr = '0x4169f01Ee9c73568C4569b62FC76C70Ce9124928';
-    const stakingAddr = '0xfA521010be807d0b08616DC227c012bb038a7005';
-    // const erc721 = await GeneralERC721V1.at(erc721addr);
-    // const startTime = Math.floor(Date.now() / 1000) - 10000;
-    // const endTime = Math.floor(Date.now() / 1000) + 10000;
-    // const owner = await erc721.owner();
-    // const publicMintType = 1;
-
-    // const walletPair = `0x${accounts[1].slice(2)}${stakingProxy.address.slice(2)}`;
-    // const sig = web3.eth.accounts.sign(
-    //   walletPair,
-    //   '0x770be1959183678b32e7ddc233cc888bbb1cc85b8bf74eccac38fe256611a8d8',
-    // ).signature;
-    // await erc721.publicMint(walletPair, 1, sig, 1, { from: accounts[1] });
-
-    const tokenId = 1;
-    await stakingProxy.unstake(erc721addr, tokenId, { from: accounts[1] });
+    await staking.stake(erc721.address, tokenId, { from: accounts[1] });
+    console.log({ 'staking contract address': staking.address });
   });
 
   it.only('test allow mint 10000 with 10 account', async () => {
@@ -172,10 +160,9 @@ contract('GeneralERC721V1', (accounts) => {
     const chainIdBN = await erc721.getChainId();
     const chainId = chainIdBN.toNumber();
 
-    const mint = async (id, account, quantity) => {
+    const mint = async (id, account, _nonces, quantity) => {
       console.log('mint: ', { id, account, quantity });
       const externalWalletAddress = account;
-      const _nonces = nonces.slice(0, quantity);
       nonces.shift(quantity);
       const data = makeData(mintType, externalWalletAddress, stakingContract, _nonces, quantity, erc721addr, chainId);
       const sig = signTypedData({
@@ -210,7 +197,9 @@ contract('GeneralERC721V1', (accounts) => {
           const quantity = 1;
           const account = accounts[accountIndex];
           console.log({ account, quantity, accountIndex });
-          await mint(i, account, quantity);
+          const _nonces = nonces.slice(0, quantity);
+          await mint(i, account, _nonces, quantity);
+
           totalMinted += quantity;
           console.log('totalMinted: ', totalMinted);
 

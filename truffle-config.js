@@ -20,8 +20,7 @@ module.exports = {
       gas: 10000000,
       // skipDryRun: true,
       // gasPrice 안쓰면 에러생김 https://etherscan.io/gastracker
-      gasPrice: 20 * 1e9,
-      // gasPrice: 82423585625,
+      gasPrice: 25 * 1e9,
       confirmations: 1,
       networkCheckTimeout: 10000000,
     },
@@ -32,7 +31,7 @@ module.exports = {
       port: 8545,
       network_id: '1',
       // gas: 1000000, // 가스비 25gwei 기준으로 잔고가 0.025eth 있으면 호출 가능.
-      // gasPrice: 20000000000, // 25gwei
+      // gasPrice: 30 * 1e9, // 25gwei
       skipDryRun: true,
       confirmations: 2,
       networkCheckTimeout: 10000000,
