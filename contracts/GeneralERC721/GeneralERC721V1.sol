@@ -29,9 +29,7 @@ contract GeneralERC721V1 is
   event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
   address public caliverseHotwallet;
   mapping(address => uint256) public nextMinNonce;
-  uint256[50] __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
   uint256 public totalSupply;
-
   bytes32 constant MintData_TYPEHASH =
     keccak256(
       'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256[] nonces,uint256 quantity)'
@@ -44,6 +42,7 @@ contract GeneralERC721V1 is
     uint256[] nonces;
     uint256 quantity;
   }
+  uint256[50] private __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
 
   constructor() {
     _disableInitializers();
