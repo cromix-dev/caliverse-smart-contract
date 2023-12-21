@@ -42,11 +42,14 @@ contract StakingContract is IERC721Receiver, Ownable {
     emit Staked(contractAddress, msg.sender, tokenId);
   }
 
-  function addStakingInfo(address walletAddress, uint256 tokenId) public {
+  function addStakingInfo(address walletAddress, uint256[] calldata tokenIds) public {
     require(Address.isContract(msg.sender), 'Only contract can call this function');
-    require(stakingInfo[msg.sender][walletAddress][tokenId] == 0, 'This token is already staked');
-    stakingInfo[msg.sender][walletAddress][tokenId] = 1;
-    emit Staked(msg.sender, walletAddress, tokenId);
+    for (uint256 i = 0; i < tokenIds.length; i++) {
+      uint256 tokenId = tokenIds[i];
+      require(stakingInfo[msg.sender][walletAddress][tokenId] == 0, 'This token is already staked');
+      stakingInfo[msg.sender][walletAddress][tokenId] = 1;
+      emit Staked(msg.sender, walletAddress, tokenId);
+    }
   }
 
   function unstake(address contractAddress, uint256 tokenId) public {

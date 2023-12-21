@@ -31,7 +31,6 @@ contract GeneralERC721V1 is
   }
   SaleInfo private saleInfo;
   uint256 public collectionSize;
-  uint256 public nextTokenId;
   // _type public: 1, allowlist: 2
   event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
   address public caliverseHotwallet;
@@ -58,7 +57,6 @@ contract GeneralERC721V1 is
     __ERC721_init(name_, symbol_);
     __ReentrancyGuard_init();
     collectionSize = collectionSize_;
-    nextTokenId = 0;
     setBaseURI(baseURI_);
     caliverseHotwallet = caliverseHotwallet_;
     __EIP712_init(name_, 'V1');
@@ -101,15 +99,13 @@ contract GeneralERC721V1 is
   }
 
   function _safeMintMany(address to, uint256 quantity_) private returns (uint256[] memory) {
-    require(nextTokenId + quantity_ <= collectionSize, 'exceed collection size');
     require(totalSupply + quantity_ <= collectionSize, 'reached max supply');
 
     uint256[] memory tokenIds = new uint256[](quantity_);
     for (uint256 i = 0; i < quantity_; i++) {
-      _safeMint(to, nextTokenId + i);
-      tokenIds[i] = nextTokenId + i;
+      _safeMint(to, totalSupply + i);
+      tokenIds[i] = totalSupply + i;
     }
-    nextTokenId = nextTokenId + quantity_;
 
     return tokenIds;
   }
@@ -175,20 +171,20 @@ contract GeneralERC721V1 is
   ) external payable nonReentrant {
     require(msg.sender == address(externalWallet), 'wrong external wallet');
     validateSignature(1, externalWallet, stakingContract, nonces, quantity, sig);
+    LibSale.ensureCallerIsUser();
+    LibSale.validatePublicSale(saleInfo, quantity);
+    uint256 totalPrice = uint256(saleInfo.price * quantity);
+    uint256[] memory tokenIds = _safeSaleMint(stakingContract, quantity);
+    LibSale.refundIfOver(totalPrice);
     uint256 usedCnt = useNonce(externalWallet, nonces);
     require(usedCnt >= quantity, 'invalid nonce');
-
-    LibSale.ensureCallerIsUser();
-    uint256[] memory tokenIds = _publicMint(stakingContract, quantity);
     addStakingInfo(externalWallet, stakingContract, tokenIds);
 
     emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
   }
 
   function addStakingInfo(address externalWallet, address stakingContract, uint256[] memory tokenIds) private {
-    for (uint256 i = 0; i < tokenIds.length; i++) {
-      StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
-    }
+    StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds);
   }
 
   function getChainId() public view returns (uint256) {
@@ -247,15 +243,12 @@ contract GeneralERC721V1 is
 
     LibSale.validatePrivateSale(saleInfo, quantity);
     uint256 totalPrice = uint256(saleInfo.price * quantity);
-
     uint256 usedCnt = useNonce(externalWallet, nonces);
     require(usedCnt >= quantity, 'not eligible for allowlist mint');
 
     uint256[] memory tokenIds = _safeSaleMint(stakingContract, quantity);
     LibSale.refundIfOver(totalPrice);
-    if (!Address.isContract(owner())) {
-      payable(owner()).transfer(totalPrice);
-    }
+
     addStakingInfo(externalWallet, stakingContract, tokenIds);
     emit Purchased(msg.sender, 2, quantity, uint256(saleInfo.price * quantity));
   }
