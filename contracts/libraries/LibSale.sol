@@ -38,7 +38,6 @@ library LibSale {
     _commonValidation(saleInfo, quantity);
 
     require(saleInfo._mintType == 2, 'sale not opened');
-    require(saleInfo.allowlist[msg.sender] >= quantity, 'not eligible for allowlist mint');
   }
 }
 
@@ -50,8 +49,7 @@ struct SaleInfo {
   uint256 maxPerAddr;
   uint256 maxPerTx;
   uint32 _mintType; // 1: public sale, 2: allow sale
-  mapping(address => uint256) allowlist;
   mapping(address => uint256) mintedDuringSale;
-  address[] participants;
+  mapping(address => mapping(uint256 => bool)) usedNonce;
   uint256 totalMinted;
 }

@@ -4,7 +4,6 @@
 const { setConfig } = require('./config.js');
 const GeneralERC721V1 = artifacts.require('../contracts/GeneralERC721/GeneralERC721V1.sol');
 const GeneralERC721Factory = artifacts.require('../contracts/GeneralERC721/GeneralERC721Factory.sol');
-const LibNFTAdmin = artifacts.require('../contracts/libraries/LibNFTAdmin.sol');
 const LibSale = artifacts.require('../contracts/libraries/LibSale.sol');
 const StakingContract = artifacts.require('../contracts/StakingContract/StakingContract.sol');
 
@@ -19,17 +18,12 @@ module.exports = async (deployer, network, accounts) => {
   console.log({ baseUri, accounts });
   console.log('deploy address: ', accounts[0]);
 
-  await deployer.deploy(LibNFTAdmin);
-  setConfig('deployed.' + network + '.LibNFTAdmin', LibNFTAdmin.address);
   await deployer.deploy(LibSale);
   setConfig('deployed.' + network + '.LibSale', LibSale.address);
-  await deployer.link(LibNFTAdmin, GeneralERC721V1);
   await deployer.link(LibSale, GeneralERC721V1);
 
   // START 이미 배포된 라이브러리 사용하고 싶은 경우
-  // const libnftAdmin = await LibNFTAdmin.at('');
   // const libsale = await LibSale.at('');
-  // await deployer.link(libnftAdmin, GeneralERC721V1);
   // await deployer.link(libsale, GeneralERC721V1);
   // END 이미 배포된 라이브러리 사용하고 싶은 경우
 

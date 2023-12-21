@@ -4,10 +4,10 @@ pragma solidity ^0.8.12;
 
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
 import '../libraries/LibSale.sol';
 import '../StakingContract/StakingContract.sol';
@@ -19,19 +19,31 @@ contract GeneralERC721V1 is
   ReentrancyGuardUpgradeable,
   ERC721Upgradeable,
   ERC721BurnableUpgradeable,
-  ERC721EnumerableUpgradeable
+  EIP712Upgradeable
 {
   using Strings for uint256;
   SaleInfo private saleInfo;
   uint256 public collectionSize;
-  mapping(address => uint256) public numberMinted; // eg. 0x... => 12
   uint256 public nextTokenId;
-  mapping(address => uint256[]) public _holds;
   // _type public: 1, allowlist: 2
   event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
   address public caliverseHotwallet;
   mapping(address => uint256) public nextMinNonce;
   uint256[50] __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
+  uint256 public totalSupply;
+
+  bytes32 constant MintData_TYPEHASH =
+    keccak256(
+      'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256[] nonces,uint256 quantity)'
+    );
+
+  struct MintData {
+    uint32 mintType; // 1: public sale, 2: allow sale
+    address externalWallet;
+    address stakingContract;
+    uint256[] nonces;
+    uint256 quantity;
+  }
 
   constructor() {
     _disableInitializers();
@@ -51,18 +63,11 @@ contract GeneralERC721V1 is
     nextTokenId = 0;
     setBaseURI(baseURI_);
     caliverseHotwallet = caliverseHotwallet_;
+    __EIP712_init(name_, 'V1');
   }
 
-  function allowlist(address address_) public view returns (uint256) {
-    return saleInfo.allowlist[address_];
-  }
-
-  function mintedDuringSale(address address_) public view returns (uint256) {
-    return saleInfo.mintedDuringSale[address_];
-  }
-
-  function participants(uint256 index) public view returns (address) {
-    return saleInfo.participants[index];
+  function nonceUsed(address address_, uint256 nonce) public view returns (bool) {
+    return saleInfo.usedNonce[address_][nonce];
   }
 
   function startTime() public view returns (uint32) {
@@ -81,9 +86,7 @@ contract GeneralERC721V1 is
     return saleInfo.limit;
   }
 
-  function supportsInterface(
-    bytes4 interfaceId
-  ) public view override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (bool) {
+  function supportsInterface(bytes4 interfaceId) public view override(ERC721Upgradeable) returns (bool) {
     return super.supportsInterface(interfaceId);
   }
 
@@ -94,7 +97,6 @@ contract GeneralERC721V1 is
 
   function _safeSaleMint(address to, uint256 quantity_) private returns (uint256[] memory) {
     uint256[] memory tokenIds = _safeMintMany(to, quantity_);
-    saleInfo.mintedDuringSale[msg.sender] = mintedDuringSale(msg.sender) + quantity_;
     saleInfo.totalMinted = saleInfo.totalMinted + quantity_;
 
     return tokenIds;
@@ -102,7 +104,7 @@ contract GeneralERC721V1 is
 
   function _safeMintMany(address to, uint256 quantity_) private returns (uint256[] memory) {
     require(nextTokenId + quantity_ <= collectionSize, 'exceed collection size');
-    require(totalSupply() + quantity_ <= collectionSize, 'reached max supply');
+    require(totalSupply + quantity_ <= collectionSize, 'reached max supply');
 
     uint256[] memory tokenIds = new uint256[](quantity_);
     for (uint256 i = 0; i < quantity_; i++) {
@@ -110,24 +112,8 @@ contract GeneralERC721V1 is
       tokenIds[i] = nextTokenId + i;
     }
     nextTokenId = nextTokenId + quantity_;
-    numberMinted[msg.sender] = numberMinted[msg.sender] + quantity_;
-
-    _addParticipant(msg.sender);
 
     return tokenIds;
-  }
-
-  function _addParticipant(address participant) private {
-    bool isParicipant = false;
-    for (uint256 i = 0; i < saleInfo.participants.length; i++) {
-      if (saleInfo.participants[i] == participant) {
-        isParicipant = true;
-      }
-    }
-
-    if (!isParicipant) {
-      saleInfo.participants.push(participant);
-    }
   }
 
   string private _baseTokenURI;
@@ -143,9 +129,14 @@ contract GeneralERC721V1 is
   function _beforeTokenTransfer(
     address from,
     address to,
-    uint256 tokenId
-  ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
-    super._beforeTokenTransfer(from, to, tokenId);
+    uint256 firstTokenId,
+    uint256 batchSize
+  ) internal override(ERC721Upgradeable) {
+    super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
+
+    if (from == address(0)) {
+      totalSupply = totalSupply + batchSize;
+    }
   }
 
   function setSaleInfo(
@@ -165,10 +156,6 @@ contract GeneralERC721V1 is
     saleInfo.maxPerTx = maxPerTx_;
     saleInfo.maxPerAddr = maxPerAddr_;
     saleInfo.totalMinted = 0;
-    for (uint256 i = 0; i < saleInfo.participants.length; i++) {
-      delete saleInfo.mintedDuringSale[saleInfo.participants[i]];
-    }
-    delete saleInfo.participants;
   }
 
   function getTextLength(string memory text) public pure returns (uint256) {
@@ -181,30 +168,34 @@ contract GeneralERC721V1 is
     return ECDSA.recover(messageHash, sig);
   }
 
-  // mintParams: walletAddress(32byte), stakingContract(32byte), chainId(32byte), nonce(32byte), contractAddress(32byte) sig
-  function publicMint(bytes memory data, uint256 quantity, bytes memory sig) external payable nonReentrant {
-    (
-      address externalWallet,
-      address stakingContract,
-      uint256 chainId,
-      uint256 nonce,
-      address contractAddress
-    ) = splitData(data);
-    require(contractAddress == address(this), 'wrong contract address');
-    require(nextMinNonce[externalWallet] <= nonce, 'wrong nonce');
+  function publicMint(
+    address externalWallet,
+    address stakingContract,
+    uint256[] calldata nonces,
+    uint256 quantity,
+    bytes memory sig
+  ) external payable nonReentrant {
     require(msg.sender == address(externalWallet), 'wrong external wallet');
-    require(recoverSig(data, sig) == address(caliverseHotwallet), 'wrong signature');
-    uint256 currentChainId = getChainId();
-    require(currentChainId == chainId, 'wrong chain id');
+    bytes32 structHash = hashMintData(MintData(2, externalWallet, stakingContract, nonces, quantity));
+    address signer = ECDSA.recover(_hashTypedDataV4(structHash), sig);
+    require(signer == caliverseHotwallet, 'wrong signature');
+    uint256[] memory unusedNonce = unUsedNonce(externalWallet, nonces);
+    require(unusedNonce.length >= quantity, 'not enough allowlist');
 
     LibSale.ensureCallerIsUser();
     uint256[] memory tokenIds = _publicMint(stakingContract, quantity);
+    addStakingInfo(externalWallet, stakingContract, tokenIds);
+
+    emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
+    for (uint256 i = 0; i < unusedNonce.length; i++) {
+      saleInfo.usedNonce[externalWallet][unusedNonce[i]] = true;
+    }
+  }
+
+  function addStakingInfo(address externalWallet, address stakingContract, uint256[] memory tokenIds) private {
     for (uint256 i = 0; i < tokenIds.length; i++) {
       StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
     }
-
-    emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
-    nextMinNonce[externalWallet] = nonce + 1;
   }
 
   function getChainId() public view returns (uint256) {
@@ -227,40 +218,49 @@ contract GeneralERC721V1 is
     return tokenIds;
   }
 
-  function allowMint(bytes memory data, uint256 quantity, bytes memory sig) external payable nonReentrant callerIsUser {
-    (
-      address externalWallet,
-      address stakingContract,
-      uint256 chainId,
-      uint256 nonce,
-      address contractAddress
-    ) = splitData(data);
-    require(contractAddress == address(this), 'wrong contract address');
-    require(nextMinNonce[externalWallet] <= nonce, 'wrong nonce');
+  function unUsedNonce(address externalWallet, uint256[] calldata nonces) private view returns (uint256[] memory) {
+    uint256[] memory unusedNonces = new uint256[](nonces.length);
+
+    uint256 unusedNonceCount = 0;
+    for (uint256 i = 0; i < nonces.length; i++) {
+      if (!saleInfo.usedNonce[externalWallet][nonces[i]]) {
+        unusedNonces[unusedNonceCount] = nonces[i];
+        unusedNonceCount++;
+      }
+    }
+
+    return unusedNonces;
+  }
+
+  function allowMint(
+    address externalWallet,
+    address stakingContract,
+    uint256[] calldata nonces,
+    uint256 quantity,
+    bytes memory sig
+  ) external payable nonReentrant callerIsUser {
     require(msg.sender == address(externalWallet), 'wrong external wallet');
-    require(recoverSig(data, sig) == address(caliverseHotwallet), 'wrong signature');
-    uint256 currentChainId = getChainId();
-    require(currentChainId == chainId, 'wrong chain id');
+
+    bytes32 structHash = hashMintData(MintData(2, externalWallet, stakingContract, nonces, quantity));
+    address signer = ECDSA.recover(_hashTypedDataV4(structHash), sig);
+    require(signer == caliverseHotwallet, 'wrong signature');
 
     LibSale.validatePrivateSale(saleInfo, quantity);
     uint256 totalPrice = uint256(saleInfo.price * quantity);
-    saleInfo.allowlist[msg.sender] = saleInfo.allowlist[msg.sender] - quantity;
+
+    uint256[] memory unusedNonce = unUsedNonce(externalWallet, nonces);
+    require(unusedNonce.length >= quantity, 'not enough allowlist');
+
     uint256[] memory tokenIds = _safeSaleMint(stakingContract, quantity);
     LibSale.refundIfOver(totalPrice);
     if (!Address.isContract(owner())) {
       payable(owner()).transfer(totalPrice);
     }
-    for (uint256 i = 0; i < tokenIds.length; i++) {
-      StakingContract(stakingContract).addStakingInfo(externalWallet, tokenIds[i]);
-    }
+    addStakingInfo(externalWallet, stakingContract, tokenIds);
     emit Purchased(msg.sender, 2, quantity, uint256(saleInfo.price * quantity));
-    nextMinNonce[externalWallet] = nonce + 1;
-  }
 
-  function seedAllowlist(address[] calldata addresses, uint256[] calldata numSlots) external onlyOwner {
-    require(addresses.length == numSlots.length, 'length not match');
-    for (uint256 i = 0; i < addresses.length; i++) {
-      saleInfo.allowlist[addresses[i]] = numSlots[i];
+    for (uint256 i = 0; i < unusedNonce.length; i++) {
+      saleInfo.usedNonce[externalWallet][unusedNonce[i]] = true;
     }
   }
 
@@ -282,53 +282,28 @@ contract GeneralERC721V1 is
     return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString(), '.json')) : '';
   }
 
-  function balance(address account) public view returns (TokenBalance[] memory) {
-    uint256 _balance = balanceOf(account);
-    TokenBalance[] memory result = new TokenBalance[](_balance);
-
-    for (uint256 i = 0; i < _balance; i++) {
-      uint256 tokenId = tokenOfOwnerByIndex(account, i);
-      result[i] = TokenBalance(tokenId, 1);
-    }
-
-    return result;
-  }
-
-  function tokenCnt(address account) public view returns (uint256) {
-    return _holds[account].length;
-  }
-
   function mintedWithinSale() public view returns (uint256) {
     return saleInfo.totalMinted;
   }
 
-  // data: externalWallet(32byte), stakingContract(32byte), quantity(32byte), chainId(32byte), nonce(32byte)
-  function splitData(
-    bytes memory data
-  )
-    public
-    pure
-    returns (address externalWallet, address stakingContract, uint256 chainId, uint256 nonce, address contractAddress)
-  {
-    // require(walletPair.length == 64);
-
-    assembly {
-      // first 32 bytes, after the length prefix.
-      externalWallet := mload(add(data, 32))
-      // second 32 bytes.
-      stakingContract := mload(add(data, 64))
-      // second 32 bytes.
-      chainId := mload(add(data, 96))
-      // second 32 bytes.
-      nonce := mload(add(data, 128))
-      contractAddress := mload(add(data, 160))
-    }
-
-    return (externalWallet, stakingContract, chainId, nonce, contractAddress);
-  }
-
   function setCaliverseHotwallet(address caliverseHotwallet_) public onlyOwner {
     caliverseHotwallet = caliverseHotwallet_;
+  }
+
+  function hashMintData(MintData memory mintData) public pure returns (bytes32) {
+    //'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256[] nonces,uint256 quantity)'
+    bytes32 hash = keccak256(
+      abi.encode(
+        MintData_TYPEHASH,
+        mintData.mintType,
+        mintData.externalWallet,
+        mintData.stakingContract,
+        keccak256(abi.encodePacked(mintData.nonces)),
+        mintData.quantity
+      )
+    );
+
+    return hash;
   }
 }
 

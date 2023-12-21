@@ -1,19 +1,53 @@
+const path = require('path');
+const _ = require('lodash');
 const { Web3 } = require('web3');
 const web3 = new Web3('http://localhost:8545');
 const GeneralERC721V1 = artifacts.require('../contracts/GeneralERC721/GeneralERC721V1.sol');
 const GeneralERC721Factory = artifacts.require('../contracts/GeneralERC721/GeneralERC721Factory.sol');
 const StakingContract = artifacts.require('../contracts/StakingContract/StakingContract.sol');
 const Bignumber = require('bignumber.js');
+const { SignTypedDataVersion, signTypedData, TypedDataUtils } = require('@metamask/eth-sig-util');
+const { createObjectCsvWriter } = require('csv-writer');
+const { mergeMap, interval, takeUntil, Subject, lastValueFrom } = require('rxjs');
 
-const makeData = (eoaAddress, erc721addr, stakingAddress, chainId, nonce) => {
-  const eoabyte32 = eoaAddress.slice(2).padStart(64, 0);
-  const stakingAddrbyte32 = stakingAddress.slice(2).padStart(64, 0);
-  const chainIdbyte32 = web3.utils.numberToHex(chainId).slice(2).padStart(64, 0);
-  const noncebyte32 = web3.utils.numberToHex(nonce).slice(2).padStart(64, 0);
-  const data = `0x` + eoabyte32 + stakingAddrbyte32 + chainIdbyte32 + noncebyte32 + erc721addr.slice(2).padStart(64, 0);
+const makeData = (mintType, eoaAddress, stakingAddress, nonces, quantity, contractAddress, chainId) => {
+  const data = {
+    types: {
+      // Define the types of your data structure
+      EIP712Domain: [
+        { name: 'name', type: 'string' },
+        { name: 'version', type: 'string' },
+        { name: 'chainId', type: 'uint256' },
+        { name: 'verifyingContract', type: 'address' },
+      ],
+      MintData: [
+        { name: 'mintType', type: 'uint32' },
+        { name: 'externalWallet', type: 'address' },
+        { name: 'stakingContract', type: 'address' },
+        { name: 'nonces', type: 'uint256[]' },
+        { name: 'quantity', type: 'uint256' },
+      ],
+    },
+    primaryType: 'MintData',
+    domain: {
+      chainId,
+      name: 'name',
+      version: 'V1',
+      verifyingContract: contractAddress,
+    },
+    message: {
+      mintType,
+      externalWallet: eoaAddress,
+      stakingContract: stakingAddress,
+      nonces,
+      quantity,
+    },
+  };
 
   return data;
 };
+
+const Account0PK = '65304613e5b307934dfe50ac9f646106030820cdcc2df8d42e4c4c74b44262df';
 
 contract('GeneralERC721V1', (accounts) => {
   it('get chain id', async () => {
@@ -69,7 +103,7 @@ contract('GeneralERC721V1', (accounts) => {
       data,
       // truffle 에서 0번 계정의 private key 를 가져옴
       //0x06a993a51c1f7943d2829bF6A23d92dd8cF7F190
-      '0x554ed756dbb3e7ed0cfe4b68bc7b31a87a0b483d287550ef3980e065f7e131d1',
+      Account0PK,
     ).signature;
     const pubmintResult = await erc721.publicMint(data, sig, {
       from: accounts[1],
@@ -108,34 +142,92 @@ contract('GeneralERC721V1', (accounts) => {
     await stakingProxy.unstake(erc721addr, tokenId, { from: accounts[1] });
   });
 
-  it.only('allowlist mint', async () => {
+  it.only('test allow mint 10000 with 10 account', async () => {
+    const csvWriter = createObjectCsvWriter({
+      path: path.resolve(__dirname, './result.csv'),
+      header: ['account', 'quantity', 'gasUsed'],
+    });
+    const nonces = _.range(0, 10000);
+
+    const maxNFT = 200;
     const factory = await GeneralERC721Factory.deployed();
-    const result = await factory.build('name', 'symbol', 100);
+    const result = await factory.build('name', 'symbol', maxNFT);
     const erc721addr = result.receipt.rawLogs[0].address;
     const erc721 = await GeneralERC721V1.at(erc721addr);
+
     const startTime = Math.floor(Date.now() / 1000) - 10000;
     const endTime = Math.floor(Date.now() / 1000) + 10000;
     const owner = await erc721.owner();
-    const allowmintType = 2;
-    const maxPerAddress = 30;
-    const maxPerTx = 10;
-    await erc721.setSaleInfo(startTime, endTime, 0, 100, allowmintType, maxPerAddress, maxPerTx);
+    const saleLimit = maxNFT;
+    const price = 0.0001 * 1e18;
+    const mintType = 2;
+    const maxPerAddress = maxNFT;
+    const maxPerTx = maxNFT;
+    await erc721.setSaleInfo(startTime, endTime, price, saleLimit, mintType, maxPerAddress, maxPerTx);
 
     console.log({ owner, erc721addr });
-    await erc721.seedAllowlist([accounts[1]], [10]);
-    const staking = await StakingContract.deployed();
-    const chainIdBN = await erc721.getChainId();
-    console.log(chainIdBN.toNumber());
-    const data = makeData(accounts[1], erc721addr, staking.address, chainIdBN.toNumber(), 1);
-    console.log(data);
-    const sig = web3.eth.accounts.sign(
-      data,
-      '0xd677ee5cbe63ef0e082d43cc2e9eb1bd4228ddca6dcca9586529ba9e87bf82a7',
-    ).signature;
 
-    const tx = await erc721.allowMint(data, 1, sig, { from: accounts[1] });
+    const staking = await StakingContract.deployed();
+    const stakingContract = staking.address;
+    const chainIdBN = await erc721.getChainId();
+    const chainId = chainIdBN.toNumber();
+
+    const mint = async (id, account, quantity) => {
+      console.log('mint: ', { id, account, quantity });
+      const externalWalletAddress = account;
+      const _nonces = nonces.slice(0, quantity);
+      nonces.shift(quantity);
+      const data = makeData(mintType, externalWalletAddress, stakingContract, _nonces, quantity, erc721addr, chainId);
+      const sig = signTypedData({
+        data,
+        version: SignTypedDataVersion.V4,
+        privateKey: Buffer.from(Account0PK, 'hex'),
+      });
+
+      const tx = await erc721.allowMint(externalWalletAddress, stakingContract, _nonces, quantity, sig, {
+        value: price * quantity,
+        from: account,
+      });
+
+      console.log(`TX ${id} mined: `, tx.receipt.gasUsed);
+      await csvWriter.writeRecords([{ account, quantity, gasUsed: tx.receipt.gasUsed }]);
+    };
+
+    let totalMinted = 0;
+
+    const stopSig$ = new Subject();
+
+    await lastValueFrom(
+      interval(300).pipe(
+        takeUntil(stopSig$),
+        mergeMap(async (i) => {
+          if (totalMinted === maxNFT) {
+            stopSig$.next();
+            return;
+          }
+          console.log('index: ', i);
+          const accountIndex = Math.floor(Math.random() * 10);
+          const quantity = 1;
+          const account = accounts[accountIndex];
+          console.log({ account, quantity, accountIndex });
+          await mint(i, account, quantity);
+          totalMinted += quantity;
+          console.log('totalMinted: ', totalMinted);
+
+          if (totalMinted === maxNFT) {
+            stopSig$.next();
+            return;
+          }
+        }),
+      ),
+    );
+
+    // for (let i = 0; i < 10; i++) {
+    //   await mint(i, accounts[i], 10);
+    // }
+
     // const gasUsed = await web3.eth.estimateGas({ from: accounts[1], to: tx.receipt.to, data: tx.receipt.input });
-    console.log('gas used: ', tx.receipt.gasUsed); //342052 이상적: 167,264
+
     // let allowamount = (await erc721.allowlist(accounts[1])).toNumber();
     // console.log({ allowamount });
     // await erc721.seedAllowlist([accounts[1]], [0]);
