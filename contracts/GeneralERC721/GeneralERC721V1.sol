@@ -139,17 +139,13 @@ contract GeneralERC721V1 is
     uint32 endTime_,
     uint256 price_,
     uint256 limit_,
-    uint32 mintType_,
-    uint256 maxPerAddr_,
-    uint256 maxPerTx_
+    uint32 mintType_
   ) external onlyOwner {
     saleInfo.startTime = startTime_;
     saleInfo.endTime = endTime_;
     saleInfo.price = price_;
     saleInfo.limit = limit_;
     saleInfo._mintType = mintType_;
-    saleInfo.maxPerTx = maxPerTx_;
-    saleInfo.maxPerAddr = maxPerAddr_;
     saleInfo.totalMinted = 0;
   }
 

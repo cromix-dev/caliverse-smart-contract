@@ -24,8 +24,6 @@ library LibSale {
   function _commonValidation(SaleInfo storage saleInfo, uint256 quantity) public view {
     require(saleInfo.totalMinted + quantity <= saleInfo.limit, 'can not mint this many');
     require(saleInfo.startTime <= block.timestamp && saleInfo.endTime >= block.timestamp, 'not opened');
-    require(quantity <= saleInfo.maxPerTx, 'can not mint this many');
-    require(saleInfo.mintedDuringSale[msg.sender] + quantity <= saleInfo.maxPerAddr, 'exceed max mint per address');
   }
 
   function validatePublicSale(SaleInfo storage saleInfo, uint256 quantity) public view {
@@ -46,9 +44,6 @@ struct SaleInfo {
   uint32 endTime;
   uint256 price;
   uint256 limit; // 전체 제한이 아니라 이번 세일에서의 제한
-  uint256 maxPerAddr;
-  uint256 maxPerTx;
   uint32 _mintType; // 1: public sale, 2: allow sale
-  mapping(address => uint256) mintedDuringSale;
   uint256 totalMinted;
 }

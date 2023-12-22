@@ -81,9 +81,7 @@ contract('GeneralERC721V1', (accounts) => {
     const saleLimit = maxNFT;
     const price = 0.0001 * 1e18;
     const mintType = 1; // public sale
-    const maxPerAddress = maxNFT;
-    const maxPerTx = maxNFT;
-    await erc721.setSaleInfo(startTime, endTime, price, saleLimit, mintType, maxPerAddress, maxPerTx);
+    await erc721.setSaleInfo(startTime, endTime, price, saleLimit, mintType);
 
     const staking = await StakingContract.deployed();
     const stakingContract = staking.address;
@@ -149,9 +147,7 @@ contract('GeneralERC721V1', (accounts) => {
     const saleLimit = maxNFT;
     const price = 0.0001 * 1e18;
     const mintType = 2;
-    const maxPerAddress = maxNFT;
-    const maxPerTx = maxNFT;
-    await erc721.setSaleInfo(startTime, endTime, price, saleLimit, mintType, maxPerAddress, maxPerTx);
+    await erc721.setSaleInfo(startTime, endTime, price, saleLimit, mintType);
 
     console.log({ owner, erc721addr });
 
