@@ -49,7 +49,7 @@ const makeData = (mintType, eoaAddress, stakingAddress, nonces, quantity, contra
 
 contract('GeneralERC721V1', (accounts) => {
   let factory, erc721;
-  const Account0PK = '0x5915dbddbeb8a44c689dd2e3a8e660042ac2a8c68d80f47f304211d4a8a8b131'.replace(/^0x/, '');
+  const Account0PK = '0x1b387ae74427676c3e018099e1e13b2d16489c8fc1fbfa4c05a15cce80934843'.replace(/^0x/, '');
   const maxNFT = 200;
 
   beforeEach(async () => {
@@ -108,7 +108,7 @@ contract('GeneralERC721V1', (accounts) => {
         privateKey: Buffer.from(Account0PK, 'hex'),
       });
 
-      const tx = await erc721.publicMint(externalWalletAddress, stakingContract, _nonces, quantity, sig, {
+      const tx = await erc721.mintWithSig(1, externalWalletAddress, stakingContract, _nonces, quantity, sig, {
         value: price * quantity,
         from: account,
       });
@@ -167,7 +167,7 @@ contract('GeneralERC721V1', (accounts) => {
         privateKey: Buffer.from(Account0PK, 'hex'),
       });
 
-      const tx = await erc721.allowMint(externalWalletAddress, stakingContract, _nonces, quantity, sig, {
+      const tx = await erc721.mintWithSig(2, externalWalletAddress, stakingContract, _nonces, quantity, sig, {
         value: price * quantity,
         from: account,
       });
@@ -218,12 +218,5 @@ contract('GeneralERC721V1', (accounts) => {
     // await erc721.seedAllowlist([accounts[1]], [0]);
     // allowamount = (await erc721.allowlist(accounts[1])).toNumber();
     // console.log({ allowamount, 'accounts[1]': accounts[1] });
-
-    // try {
-    //   await erc721.allowMint.call(data, 10, sig, { from: accounts[1] });
-    // } catch (err) {
-    //   console.log({ err });
-    //   assert.equal(err.message, 'VM Exception while processing transaction: revert not eligible for allowlist mint');
-    // }
   });
 });

@@ -34,7 +34,7 @@ contract GeneralERC721V1 is
   // _type public: 1, allowlist: 2
   event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
   address public caliverseHotwallet;
-  mapping(address => mapping(uint256 => bool)) usedNonce;
+  mapping(uint256 => bool) public usedNonce;
   uint256 public totalSupply;
   bytes32 constant MintData_TYPEHASH =
     keccak256(
@@ -61,10 +61,6 @@ contract GeneralERC721V1 is
     caliverseHotwallet = caliverseHotwallet_;
     __EIP712_init(name_, 'V1');
     totalSupply = 0;
-  }
-
-  function nonceUsed(address address_, uint256 nonce) public view returns (bool) {
-    return usedNonce[address_][nonce];
   }
 
   function startTime() public view returns (uint32) {
@@ -159,7 +155,8 @@ contract GeneralERC721V1 is
     return ECDSA.recover(messageHash, sig);
   }
 
-  function publicMint(
+  function mintWithSig(
+    uint32 mintType, // 1: public sale, 2: allow sale
     address externalWallet,
     address stakingContract,
     uint256[] calldata nonces,
@@ -167,14 +164,19 @@ contract GeneralERC721V1 is
     bytes memory sig
   ) external payable nonReentrant {
     require(msg.sender == address(externalWallet), 'wrong external wallet');
-    validateSignature(1, externalWallet, stakingContract, nonces, quantity, sig);
+    validateSignature(mintType, externalWallet, stakingContract, nonces, quantity, sig);
     LibSale.ensureCallerIsUser();
-    LibSale.validatePublicSale(saleInfo, quantity);
+    LibSale.validateSale(saleInfo, quantity);
     uint256 totalPrice = uint256(saleInfo.price * quantity);
     uint256[] memory tokenIds = _safeSaleMint(stakingContract, quantity);
     LibSale.refundIfOver(totalPrice);
-    uint256 usedCnt = useNonce(externalWallet, nonces, quantity);
-    require(usedCnt >= quantity, 'invalid nonce');
+    uint256 usedCnt = useNonce(nonces, quantity);
+    if (mintType == 1) {
+      require(usedCnt >= quantity, 'can not mint this many');
+    } else if (mintType == 2) {
+      require(usedCnt >= quantity, 'not eligible for allowlist mint');
+    }
+
     addStakingInfo(externalWallet, stakingContract, tokenIds);
 
     emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
@@ -192,15 +194,12 @@ contract GeneralERC721V1 is
     return chainId;
   }
 
-  function useNonce(
-    address externalWallet,
-    uint256[] calldata nonces,
-    uint256 quantity
-  ) private returns (uint256 usedCnt) {
+  function useNonce(uint256[] calldata nonces, uint256 quantity) private returns (uint256 usedCnt) {
+    require(nonces.length >= quantity, 'not enough nonces');
     for (uint256 i = 0; i < nonces.length; i++) {
-      if (!usedNonce[externalWallet][nonces[i]] && usedCnt < quantity) {
+      if (!usedNonce[nonces[i]] && usedCnt < quantity) {
         usedCnt++;
-        usedNonce[externalWallet][nonces[i]] = true;
+        usedNonce[nonces[i]] = true;
       } else {
         continue;
       }
@@ -220,28 +219,6 @@ contract GeneralERC721V1 is
     bytes32 structHash = hashMintData(MintData(mintType, externalWallet, stakingContract, nonces, quantity));
     address signer = ECDSA.recover(_hashTypedDataV4(structHash), sig);
     require(signer == caliverseHotwallet, 'wrong signature');
-  }
-
-  function allowMint(
-    address externalWallet,
-    address stakingContract,
-    uint256[] calldata nonces,
-    uint256 quantity,
-    bytes memory sig
-  ) external payable nonReentrant callerIsUser {
-    require(msg.sender == address(externalWallet), 'wrong external wallet');
-    validateSignature(2, externalWallet, stakingContract, nonces, quantity, sig);
-
-    LibSale.validatePrivateSale(saleInfo, quantity);
-    uint256 totalPrice = uint256(saleInfo.price * quantity);
-    uint256 usedCnt = useNonce(externalWallet, nonces, quantity);
-    require(usedCnt >= quantity, 'not eligible for allowlist mint');
-
-    uint256[] memory tokenIds = _safeSaleMint(stakingContract, quantity);
-    LibSale.refundIfOver(totalPrice);
-
-    addStakingInfo(externalWallet, stakingContract, tokenIds);
-    emit Purchased(msg.sender, 2, quantity, uint256(saleInfo.price * quantity));
   }
 
   function mintTo(address[] memory addresses, uint256[] memory amounts) public nonReentrant onlyOwner {

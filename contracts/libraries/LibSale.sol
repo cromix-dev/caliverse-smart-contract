@@ -21,21 +21,9 @@ library LibSale {
     }
   }
 
-  function _commonValidation(SaleInfo storage saleInfo, uint256 quantity) public view {
+  function validateSale(SaleInfo storage saleInfo, uint256 quantity) public view {
     require(saleInfo.totalMinted + quantity <= saleInfo.limit, 'can not mint this many');
     require(saleInfo.startTime <= block.timestamp && saleInfo.endTime >= block.timestamp, 'not opened');
-  }
-
-  function validatePublicSale(SaleInfo storage saleInfo, uint256 quantity) public view {
-    _commonValidation(saleInfo, quantity);
-
-    require(saleInfo._mintType == 1, 'public sale not opened');
-  }
-
-  function validatePrivateSale(SaleInfo storage saleInfo, uint256 quantity) public view callerIsUser {
-    _commonValidation(saleInfo, quantity);
-
-    require(saleInfo._mintType == 2, 'sale not opened');
   }
 }
 
