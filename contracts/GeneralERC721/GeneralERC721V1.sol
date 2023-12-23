@@ -41,6 +41,7 @@ contract GeneralERC721V1 is
       'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256[] nonces,uint256 quantity)'
     );
   uint256[50] private __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
+  uint256 public nextTokenId;
 
   constructor() {
     _disableInitializers();
@@ -61,6 +62,7 @@ contract GeneralERC721V1 is
     caliverseHotwallet = caliverseHotwallet_;
     __EIP712_init(name_, 'V1');
     totalSupply = 0;
+    nextTokenId = 0;
   }
 
   function startTime() public view returns (uint32) {
@@ -96,12 +98,13 @@ contract GeneralERC721V1 is
   }
 
   function _safeMintMany(address to, uint256 quantity_) private returns (uint256[] memory) {
-    require(totalSupply + quantity_ <= collectionSize, 'reached max supply');
+    require(nextTokenId + quantity_ <= collectionSize, 'reached max supply');
 
     uint256[] memory tokenIds = new uint256[](quantity_);
     for (uint256 i = 0; i < quantity_; i++) {
-      _safeMint(to, totalSupply + i);
-      tokenIds[i] = totalSupply + i;
+      _safeMint(to, nextTokenId);
+      tokenIds[i] = nextTokenId;
+      nextTokenId++;
     }
 
     return tokenIds;
