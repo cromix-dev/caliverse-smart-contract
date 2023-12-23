@@ -128,6 +128,9 @@ contract GeneralERC721V1 is
     if (from == address(0)) {
       totalSupply = totalSupply + batchSize;
     }
+    if (to == address(0)) {
+      totalSupply = totalSupply - batchSize;
+    }
   }
 
   function setSaleInfo(
