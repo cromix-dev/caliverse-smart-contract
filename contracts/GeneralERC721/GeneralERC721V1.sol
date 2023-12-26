@@ -41,6 +41,7 @@ contract GeneralERC721V1 is
       'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256 nonce,uint256 quantity,uint256 maxQuantity)'
     );
   uint256 public nextTokenId;
+  uint256 public totalSupply;
   mapping(uint256 => mapping(address => uint256)) _userMinted;
   uint256[50] private __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
 
@@ -63,6 +64,7 @@ contract GeneralERC721V1 is
     caliverseHotwallet = caliverseHotwallet_;
     __EIP712_init(name_, 'V1');
     nextTokenId = 0;
+    totalSupply = 0;
   }
 
   function startTime() public view returns (uint32) {
@@ -128,6 +130,12 @@ contract GeneralERC721V1 is
     uint256 batchSize
   ) internal override(ERC721Upgradeable) {
     super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
+    if (from == address(0)) {
+      totalSupply = totalSupply + batchSize;
+    }
+    if (to == address(0)) {
+      totalSupply = totalSupply - batchSize;
+    }
   }
 
   function setSaleInfo(

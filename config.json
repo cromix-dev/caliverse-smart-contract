@@ -23,10 +23,10 @@
       "GeneralERC721Factory": "0xf25186B5081Ff5cE73482AD761DB0eB0d25abfBF"
     },
     "sepolia-fork": {
-      "LibSale": "0x67c23122d65811bfAfcccAaC2671dFEf9e4d1963",
-      "GeneralERC721V1": "0xd466c8ecCc06ED3E799dFf631023a398de0113b7",
-      "GeneralERC721Factory": "0xdD837065f2cAC570C80A6f1E6Da7cB70634AeE1D",
-      "StakingContract": "0xaAa521BADA6e982bFcE93D77a7348D196B8b5607"
+      "LibSale": "0x43a1D0F7A5A11CB2FD57adc8De40b70167D5e02B",
+      "GeneralERC721V1": "0xE3c4f35Ec468D1E11835eA24B7171353B8b8fd1f",
+      "GeneralERC721Factory": "0x61Fa6543d1Ad2Ab24Cd5590b3e206231C3fcfD3C",
+      "StakingContract": "0xc48D03f428d8d7E782D94B81722b78b0732420ab"
     },
     "development": {
       "LibSale": "0x1C536a4a947C33c64836e629D77b23aA17Fd3681",

@@ -20,7 +20,7 @@ module.exports = {
       gas: 10000000,
       // skipDryRun: true,
       // gasPrice 안쓰면 에러생김 https://etherscan.io/gastracker
-      gasPrice: 100 * 1e9,
+      gasPrice: 50 * 1e9,
       confirmations: 1,
       networkCheckTimeout: 10000000,
     },
