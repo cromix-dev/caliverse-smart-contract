@@ -10,7 +10,7 @@ const { SignTypedDataVersion, signTypedData, TypedDataUtils } = require('@metama
 const { createObjectCsvWriter } = require('csv-writer');
 const { mergeMap, interval, takeUntil, Subject, lastValueFrom } = require('rxjs');
 
-const makeData = (mintType, eoaAddress, stakingAddress, nonces, quantity, contractAddress, chainId) => {
+const makeData = (mintType, eoaAddress, stakingAddress, nonce, quantity, maxQuantity, contractAddress, chainId) => {
   const data = {
     types: {
       // Define the types of your data structure
@@ -24,8 +24,9 @@ const makeData = (mintType, eoaAddress, stakingAddress, nonces, quantity, contra
         { name: 'mintType', type: 'uint32' },
         { name: 'externalWallet', type: 'address' },
         { name: 'stakingContract', type: 'address' },
-        { name: 'nonces', type: 'uint256[]' },
+        { name: 'nonce', type: 'uint256' },
         { name: 'quantity', type: 'uint256' },
+        { name: 'maxQuantity', type: 'uint256' },
       ],
     },
     primaryType: 'MintData',
@@ -39,8 +40,9 @@ const makeData = (mintType, eoaAddress, stakingAddress, nonces, quantity, contra
       mintType,
       externalWallet: eoaAddress,
       stakingContract: stakingAddress,
-      nonces,
+      nonce,
       quantity,
+      maxQuantity,
     },
   };
 
@@ -49,7 +51,7 @@ const makeData = (mintType, eoaAddress, stakingAddress, nonces, quantity, contra
 
 contract('GeneralERC721V1', (accounts) => {
   let factory, erc721;
-  const Account0PK = '0x1b387ae74427676c3e018099e1e13b2d16489c8fc1fbfa4c05a15cce80934843'.replace(/^0x/, '');
+  const Account0PK = '0x6fd22d5f007623a55af753441c1a8a3c0d07a617d4ef0057ff56b08d51c8b68a'.replace(/^0x/, '');
   const maxNFT = 200;
 
   beforeEach(async () => {
@@ -81,6 +83,7 @@ contract('GeneralERC721V1', (accounts) => {
     const saleLimit = maxNFT;
     const price = 0.0001 * 1e18;
     const mintType = 1; // public sale
+
     await erc721.setSaleInfo(startTime, endTime, price, saleLimit, mintType);
 
     const staking = await StakingContract.deployed();
@@ -90,15 +93,16 @@ contract('GeneralERC721V1', (accounts) => {
 
     const mint = async (id, account, quantity) => {
       console.log('mint: ', { id, account, quantity });
+      const maxQuantity = 1;
       const externalWalletAddress = account;
-      const _nonces = nonces.slice(0, quantity);
-      nonces.shift(quantity);
+      const nonce = nonces.shift(1);
       const data = makeData(
         mintType,
         externalWalletAddress,
         stakingContract,
-        _nonces,
+        nonce,
         quantity,
+        maxQuantity,
         erc721.address,
         chainId,
       );
@@ -108,10 +112,19 @@ contract('GeneralERC721V1', (accounts) => {
         privateKey: Buffer.from(Account0PK, 'hex'),
       });
 
-      const tx = await erc721.mintWithSig(1, externalWalletAddress, stakingContract, _nonces, quantity, sig, {
-        value: price * quantity,
-        from: account,
-      });
+      const tx = await erc721.mintWithSig(
+        1,
+        externalWalletAddress,
+        stakingContract,
+        nonce,
+        quantity,
+        maxQuantity,
+        sig,
+        {
+          value: price * quantity,
+          from: account,
+        },
+      );
 
       console.log(`TX ${id} mined: `, tx.receipt.gasUsed);
       await csvWriter.writeRecords([{ account, quantity, gasUsed: tx.receipt.gasUsed }]);
@@ -141,6 +154,11 @@ contract('GeneralERC721V1', (accounts) => {
     const erc721addr = result.receipt.rawLogs[0].address;
     const erc721 = await GeneralERC721V1.at(erc721addr);
 
+    const saleIndex = await erc721.saleIndex();
+    console.log('####', saleIndex.toNumber());
+    const userMinted = await erc721.userMinted(saleIndex, accounts[1]);
+    console.log('#### userMinted', userMinted.toNumber());
+
     const startTime = Math.floor(Date.now() / 1000) - 10000;
     const endTime = Math.floor(Date.now() / 1000) + 10000;
     const owner = await erc721.owner();
@@ -156,21 +174,40 @@ contract('GeneralERC721V1', (accounts) => {
     const chainIdBN = await erc721.getChainId();
     const chainId = chainIdBN.toNumber();
 
-    const mint = async (id, account, _nonces, quantity) => {
+    const mint = async (id, account, nonce, quantity) => {
       console.log('mint: ', { id, account, quantity });
+      const maxQuantity = 1;
       const externalWalletAddress = account;
-      nonces.shift(quantity);
-      const data = makeData(mintType, externalWalletAddress, stakingContract, _nonces, quantity, erc721addr, chainId);
+
+      const data = makeData(
+        mintType,
+        externalWalletAddress,
+        stakingContract,
+        nonce,
+        quantity,
+        maxQuantity,
+        erc721addr,
+        chainId,
+      );
       const sig = signTypedData({
         data,
         version: SignTypedDataVersion.V4,
         privateKey: Buffer.from(Account0PK, 'hex'),
       });
-
-      const tx = await erc721.mintWithSig(2, externalWalletAddress, stakingContract, _nonces, quantity, sig, {
-        value: price * quantity,
-        from: account,
-      });
+      const allowMintType = 2;
+      const tx = await erc721.mintWithSig(
+        allowMintType,
+        externalWalletAddress,
+        stakingContract,
+        nonce,
+        quantity,
+        maxQuantity,
+        sig,
+        {
+          value: price * quantity,
+          from: account,
+        },
+      );
 
       console.log(`TX ${id} mined: `, tx.receipt.gasUsed);
       await csvWriter.writeRecords([{ account, quantity, gasUsed: tx.receipt.gasUsed }]);
@@ -193,8 +230,8 @@ contract('GeneralERC721V1', (accounts) => {
           const quantity = 1;
           const account = accounts[accountIndex];
           console.log({ account, quantity, accountIndex });
-          const _nonces = nonces.slice(0, quantity);
-          await mint(i, account, _nonces, quantity);
+          const nonce = nonces.shift(1);
+          await mint(i, account, nonce, quantity);
 
           totalMinted += quantity;
           console.log('totalMinted: ', totalMinted);

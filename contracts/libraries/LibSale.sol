@@ -20,14 +20,10 @@ library LibSale {
       Address.sendValue(payable(msg.sender), msg.value - price_);
     }
   }
-
-  function validateSale(SaleInfo storage saleInfo, uint256 quantity) public view {
-    require(saleInfo.totalMinted + quantity <= saleInfo.limit, 'can not mint this many');
-    require(saleInfo.startTime <= block.timestamp && saleInfo.endTime >= block.timestamp, 'not opened');
-  }
 }
 
 struct SaleInfo {
+  uint256 index;
   uint32 startTime;
   uint32 endTime;
   uint256 price;

@@ -1,10 +1,10 @@
 {
   "deployed": {
     "sepolia": {
-      "GeneralERC721V1": "0x66a6D4001e90b81731Bc41dcDa24Be4b866335Fc",
-      "LibSale": "0x67cf168EAdbA959D44600bB93Ed26B4E99B027C9",
-      "GeneralERC721Factory": "0x2A2CeE49fBe3C66CB03a637Ca0Da39e7eB4EEC62",
-      "StakingContract": "0xbFFC9e71FD1ADfFa5c55489Bd94584445abD9b0C"
+      "GeneralERC721V1": "0xd466c8ecCc06ED3E799dFf631023a398de0113b7",
+      "LibSale": "0x67c23122d65811bfAfcccAaC2671dFEf9e4d1963",
+      "GeneralERC721Factory": "0xdD837065f2cAC570C80A6f1E6Da7cB70634AeE1D",
+      "StakingContract": "0xaAa521BADA6e982bFcE93D77a7348D196B8b5607"
     },
     "mainnet": {
       "LibSale": "0xd27618Ab2AA941b5F6e66138A1356F6C93fF857A",
@@ -23,16 +23,16 @@
       "GeneralERC721Factory": "0xf25186B5081Ff5cE73482AD761DB0eB0d25abfBF"
     },
     "sepolia-fork": {
-      "LibSale": "0x67cf168EAdbA959D44600bB93Ed26B4E99B027C9",
-      "GeneralERC721V1": "0x66a6D4001e90b81731Bc41dcDa24Be4b866335Fc",
-      "GeneralERC721Factory": "0x2A2CeE49fBe3C66CB03a637Ca0Da39e7eB4EEC62",
-      "StakingContract": "0xbFFC9e71FD1ADfFa5c55489Bd94584445abD9b0C"
+      "LibSale": "0x67c23122d65811bfAfcccAaC2671dFEf9e4d1963",
+      "GeneralERC721V1": "0xd466c8ecCc06ED3E799dFf631023a398de0113b7",
+      "GeneralERC721Factory": "0xdD837065f2cAC570C80A6f1E6Da7cB70634AeE1D",
+      "StakingContract": "0xaAa521BADA6e982bFcE93D77a7348D196B8b5607"
     },
     "development": {
-      "LibSale": "0x4cBF6278783912C6C07f5c9539C7302010Fd7d26",
-      "GeneralERC721V1": "0xd2C037fbae6f36D102016Ecdbefe47a53E96F269",
-      "GeneralERC721Factory": "0x91729e26EB345df3231197D818f1950B5239788b",
-      "StakingContract": "0x2D3f9efEB91A72d4283FA0a99E75f817C57AdFCa"
+      "LibSale": "0x1C536a4a947C33c64836e629D77b23aA17Fd3681",
+      "GeneralERC721V1": "0x02FD9eD1c9DA3bFB3C867B057A88eefae227B6B2",
+      "GeneralERC721Factory": "0xeb9869446961acca16636CDe1F9b99E5e215FdB7",
+      "StakingContract": "0x6947Bd718440f16243673794b86A4660130abEd0"
     }
   }
 }

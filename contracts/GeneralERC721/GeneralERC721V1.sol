@@ -26,8 +26,9 @@ contract GeneralERC721V1 is
     uint32 mintType; // 1: public sale, 2: allow sale
     address externalWallet;
     address stakingContract;
-    uint256[] nonces;
+    uint256 nonce;
     uint256 quantity;
+    uint256 maxQuantity;
   }
   SaleInfo private saleInfo;
   uint256 public collectionSize;
@@ -35,13 +36,13 @@ contract GeneralERC721V1 is
   event Purchased(address indexed _buyer, uint256 _type, uint256 _quantity, uint256 _price);
   address public caliverseHotwallet;
   mapping(uint256 => bool) public usedNonce;
-  uint256 public totalSupply;
   bytes32 constant MintData_TYPEHASH =
     keccak256(
-      'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256[] nonces,uint256 quantity)'
+      'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256 nonce,uint256 quantity,uint256 maxQuantity)'
     );
-  uint256[50] private __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
   uint256 public nextTokenId;
+  mapping(uint256 => mapping(address => uint256)) _userMinted;
+  uint256[50] private __gap; // 새로운 state가 추가되면 값을 사이즈에 맞게 조금씩 줄여줘야함
 
   constructor() {
     _disableInitializers();
@@ -61,7 +62,6 @@ contract GeneralERC721V1 is
     setBaseURI(baseURI_);
     caliverseHotwallet = caliverseHotwallet_;
     __EIP712_init(name_, 'V1');
-    totalSupply = 0;
     nextTokenId = 0;
   }
 
@@ -93,6 +93,7 @@ contract GeneralERC721V1 is
   function _safeSaleMint(address to, uint256 quantity_) private returns (uint256[] memory tokenIds) {
     tokenIds = _safeMintMany(to, quantity_);
     saleInfo.totalMinted = saleInfo.totalMinted + quantity_;
+    _userMinted[saleInfo.index][msg.sender] = userMinted(saleInfo.index, msg.sender) + quantity_;
 
     return tokenIds;
   }
@@ -127,13 +128,6 @@ contract GeneralERC721V1 is
     uint256 batchSize
   ) internal override(ERC721Upgradeable) {
     super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
-
-    if (from == address(0)) {
-      totalSupply = totalSupply + batchSize;
-    }
-    if (to == address(0)) {
-      totalSupply = totalSupply - batchSize;
-    }
   }
 
   function setSaleInfo(
@@ -143,6 +137,7 @@ contract GeneralERC721V1 is
     uint256 limit_,
     uint32 mintType_
   ) external onlyOwner {
+    saleInfo.index++;
     saleInfo.startTime = startTime_;
     saleInfo.endTime = endTime_;
     saleInfo.price = price_;
@@ -165,23 +160,19 @@ contract GeneralERC721V1 is
     uint32 mintType, // 1: public sale, 2: allow sale
     address externalWallet,
     address stakingContract,
-    uint256[] calldata nonces,
+    uint256 nonce,
     uint256 quantity,
+    uint256 maxQuantity,
     bytes memory sig
   ) external payable nonReentrant {
     require(msg.sender == address(externalWallet), 'wrong external wallet');
-    validateSignature(mintType, externalWallet, stakingContract, nonces, quantity, sig);
+    validateSignature(mintType, externalWallet, stakingContract, nonce, quantity, maxQuantity, sig);
     LibSale.ensureCallerIsUser();
-    LibSale.validateSale(saleInfo, quantity);
+    validateSale(quantity, maxQuantity);
     uint256 totalPrice = uint256(saleInfo.price * quantity);
     uint256[] memory tokenIds = _safeSaleMint(stakingContract, quantity);
     LibSale.refundIfOver(totalPrice);
-    uint256 usedCnt = useNonce(nonces, quantity);
-    if (mintType == 1) {
-      require(usedCnt >= quantity, 'can not mint this many');
-    } else if (mintType == 2) {
-      require(usedCnt >= quantity, 'not eligible for allowlist mint');
-    }
+    useNonce(nonce);
 
     addStakingInfo(externalWallet, stakingContract, tokenIds);
 
@@ -200,29 +191,23 @@ contract GeneralERC721V1 is
     return chainId;
   }
 
-  function useNonce(uint256[] calldata nonces, uint256 quantity) private returns (uint256 usedCnt) {
-    require(nonces.length >= quantity, 'not enough nonces');
-    for (uint256 i = 0; i < nonces.length; i++) {
-      if (!usedNonce[nonces[i]] && usedCnt < quantity) {
-        usedCnt++;
-        usedNonce[nonces[i]] = true;
-      } else {
-        continue;
-      }
-    }
-
-    return usedCnt;
+  function useNonce(uint256 nonce) private {
+    require(usedNonce[nonce] == false, 'nonce already used');
+    usedNonce[nonce] = true;
   }
 
   function validateSignature(
     uint32 mintType,
     address externalWallet,
     address stakingContract,
-    uint256[] calldata nonces,
+    uint256 nonce,
     uint256 quantity,
+    uint256 maxQuantity,
     bytes memory sig
   ) internal view {
-    bytes32 structHash = hashMintData(MintData(mintType, externalWallet, stakingContract, nonces, quantity));
+    bytes32 structHash = hashMintData(
+      MintData(mintType, externalWallet, stakingContract, nonce, quantity, maxQuantity)
+    );
     address signer = ECDSA.recover(_hashTypedDataV4(structHash), sig);
     require(signer == caliverseHotwallet, 'wrong signature');
   }
@@ -254,19 +239,34 @@ contract GeneralERC721V1 is
   }
 
   function hashMintData(MintData memory mintData) public pure returns (bytes32) {
-    //'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256[] nonces,uint256 quantity)'
+    //'MintData(uint32 mintType,address externalWallet,address stakingContract,uint256 nonce,uint256 quantity,uint256 maxQuantity)'
     bytes32 hash = keccak256(
       abi.encode(
         MintData_TYPEHASH,
         mintData.mintType,
         mintData.externalWallet,
         mintData.stakingContract,
-        keccak256(abi.encodePacked(mintData.nonces)),
-        mintData.quantity
+        mintData.nonce,
+        mintData.quantity,
+        mintData.maxQuantity
       )
     );
 
     return hash;
+  }
+
+  function saleIndex() public view returns (uint256) {
+    return saleInfo.index;
+  }
+
+  function validateSale(uint256 quantity, uint256 maxQuantity) public view {
+    require(_userMinted[saleInfo.index][msg.sender] + quantity <= maxQuantity, 'can not mint this many');
+    require(saleInfo.totalMinted + quantity <= saleInfo.limit, 'can not mint this many');
+    require(saleInfo.startTime <= block.timestamp && saleInfo.endTime >= block.timestamp, 'not opened');
+  }
+
+  function userMinted(uint256 _saleIndex, address user) public view returns (uint256) {
+    return _userMinted[_saleIndex][user];
   }
 }
 
