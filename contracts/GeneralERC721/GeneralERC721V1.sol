@@ -184,7 +184,7 @@ contract GeneralERC721V1 is
 
     addStakingInfo(externalWallet, stakingContract, tokenIds);
 
-    emit Purchased(msg.sender, 1, quantity, uint256(saleInfo.price * quantity));
+    emit Purchased(msg.sender, mintType, quantity, uint256(saleInfo.price * quantity));
   }
 
   function addStakingInfo(address externalWallet, address stakingContract, uint256[] memory tokenIds) private {
